@@ -1,0 +1,21 @@
+# Gradle & Android Build
+.gradle/
+build/
+**/build/
+android-app/.gradle/
+android-app/app/build/
+android-app/.idea/
+android-app/*.iml
+android-app/local.properties
+android-app/.cxx/
+
+# Node & Preview
+preview/node_modules/
+preview/dist/
+preview/.vite/
+
+# OS & Logs
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
