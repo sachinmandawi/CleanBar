@@ -18,8 +18,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("cleanbarRelease") {
+            storeFile = file("../cleanbar.jks")
+            storePassword = "cleanbarpassword"
+            keyAlias = "cleanbar"
+            keyPassword = "cleanbarpassword"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("cleanbarRelease")
+        }
         release {
+            signingConfig = signingConfigs.getByName("cleanbarRelease")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
