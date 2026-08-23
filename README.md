@@ -39,7 +39,7 @@
 - ⚡ **1-Tap Master Toggle:** Instantly hide or restore all status bar elements with a single click.
 - 🚫 **Complete Icon & Clock Removal:** Disables system icons, clock, battery percentage, Wi-Fi, 5G, and notification icons seamlessly without root.
 - 🎛️ **Quick Settings Tile:** Add the CleanBar tile to your notification quick settings shade to toggle status bar visibility from anywhere.
-- 🖤 **Notion Dark Minimalist UI:** Ultra-clean, distraction-free aesthetic with pure flat colors and zero toast popups.
+- 🖤 **Clean Minimalist Dark UI:** Ultra-clean, distraction-free aesthetic with pure flat colors and zero toast popups.
 - 📳 **Haptic Feedback:** Crisp physical vibration feedback on every button tap.
 - 🔒 **No Root Required:** Utilizes the privileged [Shizuku](https://shizuku.rikka.app/) Binder service via Wireless Debugging / ADB.
 - 🛡️ **Fail-Safe State Sync:** Automatically queries and synchronizes real device status on app launch and resume.
@@ -88,7 +88,7 @@ settings put global policy_control null
 - **Privileged Backend:** Rikka Shizuku API (v13.1.5)
 - **Quick Settings:** Android System `TileService`
 - **Asynchronous Execution:** Kotlin Coroutines + `Dispatchers.IO`
-- **Design System:** Custom Notion Dark Color Palette
+- **Design System:** Custom CleanBar Dark Color Palette
 
 ---
 

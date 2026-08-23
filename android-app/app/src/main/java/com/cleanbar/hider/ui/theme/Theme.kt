@@ -4,16 +4,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val NotionDarkColorScheme = darkColorScheme(
-    primary = NotionBlueText,
-    onPrimary = NotionDarkBg,
-    secondary = NotionTextSecondary,
-    background = NotionDarkBg,
-    surface = NotionDarkSurface,
-    surfaceVariant = NotionDarkCard,
-    onBackground = NotionTextPrimary,
-    onSurface = NotionTextPrimary,
-    outline = NotionDarkBorder
+private val CleanBarDarkColorScheme = darkColorScheme(
+    primary = CleanBarBlueText,
+    onPrimary = CleanBarDarkBg,
+    secondary = CleanBarTextSecondary,
+    background = CleanBarDarkBg,
+    surface = CleanBarDarkSurface,
+    surfaceVariant = CleanBarDarkCard,
+    onBackground = CleanBarTextPrimary,
+    onSurface = CleanBarTextPrimary,
+    outline = CleanBarDarkBorder
 )
 
 @Composable
@@ -22,7 +22,7 @@ fun CleanBarTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = NotionDarkColorScheme,
+        colorScheme = CleanBarDarkColorScheme,
         content = content
     )
 }

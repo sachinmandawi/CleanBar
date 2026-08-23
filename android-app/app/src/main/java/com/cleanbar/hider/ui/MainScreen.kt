@@ -85,7 +85,7 @@ fun MainScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NotionDarkBg)
+            .background(CleanBarDarkBg)
             .padding(24.dp)
     ) {
         Column(
@@ -94,7 +94,7 @@ fun MainScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             
-            // Top Flat Shizuku Status Pill
+            // Top Status Pill
             Box(
                 modifier = Modifier
                     .padding(top = 32.dp)
@@ -102,9 +102,9 @@ fun MainScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
-                    color = NotionDarkSurface,
+                    color = CleanBarDarkSurface,
                     shape = RoundedCornerShape(20.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NotionDarkBorder),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CleanBarDarkBorder),
                     modifier = Modifier.clickable {
                         vibrate()
                         if (!hasShizukuPermission) onRequestPermission() else onRefreshStatus()
@@ -118,12 +118,12 @@ fun MainScreen(
                             modifier = Modifier
                                 .size(7.dp)
                                 .clip(CircleShape)
-                                .background(if (isShizukuActive && hasShizukuPermission) NotionGreenText else NotionRedText)
+                                .background(if (isShizukuActive && hasShizukuPermission) CleanBarGreenText else CleanBarRedText)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isShizukuActive && hasShizukuPermission) "Shizuku Ready" else "Tap to Authorize Shizuku",
-                            color = NotionTextPrimary,
+                            color = CleanBarTextPrimary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -132,7 +132,7 @@ fun MainScreen(
             }
 
             // =================================================================
-            // CENTER: PURE 1-CLICK MASTER BUTTON (NO TOASTS)
+            // CENTER: PURE 1-CLICK MASTER BUTTON
             // =================================================================
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -202,7 +202,7 @@ fun MainScreen(
 
                 Text(
                     text = if (isHidden) "Status Bar is 100% HIDDEN\nTap button to make it VISIBLE" else "Status Bar is VISIBLE\nTap button to HIDE everything",
-                    color = if (isHidden) Color(0xFFFF8585) else NotionTextSecondary,
+                    color = if (isHidden) Color(0xFFFF8585) else CleanBarTextSecondary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
                     textAlign = TextAlign.Center,
