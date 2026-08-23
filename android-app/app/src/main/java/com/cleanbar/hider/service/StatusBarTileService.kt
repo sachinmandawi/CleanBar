@@ -10,13 +10,16 @@ import com.cleanbar.hider.shizuku.ImmersiveController
 import com.cleanbar.hider.shizuku.ShizukuManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
 @RequiresApi(Build.VERSION_CODES.N)
 class StatusBarTileService : TileService() {
 
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val serviceJob = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.Main + serviceJob)
     private val isProcessing = AtomicBoolean(false)
 
     override fun onStartListening() {
@@ -88,5 +91,10 @@ class StatusBarTileService : TileService() {
                 e.printStackTrace()
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceJob.cancel()
     }
 }

@@ -49,13 +49,14 @@ object ShizukuManager {
     }
 
     /**
-     * Executes shell command using Shizuku privileged binder process.
+     * Executes shell command using Shizuku privileged binder process safely.
      */
     suspend fun executeCommand(command: String): Result<String> = withContext(Dispatchers.IO) {
         if (!hasPermission()) {
             return@withContext Result.failure(IllegalStateException("Shizuku permission not granted"))
         }
 
+        var process: Process? = null
         try {
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
@@ -64,20 +65,23 @@ object ShizukuManager {
                 String::class.java
             )
             method.isAccessible = true
-            val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+            process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
 
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val errorReader = BufferedReader(InputStreamReader(process.errorStream))
-            
             val output = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                output.append(line).append("\n")
+            val errorOutput = StringBuilder()
+
+            BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    output.append(line).append("\n")
+                }
             }
 
-            val errorOutput = StringBuilder()
-            while (errorReader.readLine().also { line = it } != null) {
-                errorOutput.append(line).append("\n")
+            BufferedReader(InputStreamReader(process.errorStream)).use { errorReader ->
+                var line: String?
+                while (errorReader.readLine().also { line = it } != null) {
+                    errorOutput.append(line).append("\n")
+                }
             }
 
             val exitCode = process.waitFor()
@@ -91,6 +95,10 @@ object ShizukuManager {
             }
         } catch (e: Throwable) {
             Result.failure(e)
+        } finally {
+            try {
+                process?.destroy()
+            } catch (ignored: Throwable) {}
         }
     }
 }
