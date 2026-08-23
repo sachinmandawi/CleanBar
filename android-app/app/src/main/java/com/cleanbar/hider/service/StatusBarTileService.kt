@@ -36,7 +36,7 @@ class StatusBarTileService : TileService() {
         if (!ShizukuManager.hasPermission()) {
             val tile = qsTile ?: run { isProcessing.set(false); return }
             tile.state = Tile.STATE_UNAVAILABLE
-            tile.subtitle = "Shizuku Required"
+            setTileSubtitle(tile, "Shizuku Required")
             tile.updateTile()
             isProcessing.set(false)
             return
@@ -51,12 +51,12 @@ class StatusBarTileService : TileService() {
                     ImmersiveController.resetToDefault()
                     tile.state = Tile.STATE_INACTIVE
                     tile.label = "CleanBar"
-                    tile.subtitle = "Visible"
+                    setTileSubtitle(tile, "Visible")
                 } else {
                     ImmersiveController.hideStatusBarGlobally()
                     tile.state = Tile.STATE_ACTIVE
                     tile.label = "CleanBar"
-                    tile.subtitle = "Hidden"
+                    setTileSubtitle(tile, "Hidden")
                 }
                 tile.icon = Icon.createWithResource(this@StatusBarTileService, R.drawable.ic_status_bar_tile)
                 tile.updateTile()
@@ -73,7 +73,7 @@ class StatusBarTileService : TileService() {
         if (!ShizukuManager.hasPermission()) {
             tile.state = Tile.STATE_UNAVAILABLE
             tile.label = "CleanBar"
-            tile.subtitle = "Setup Needed"
+            setTileSubtitle(tile, "Setup Needed")
             tile.icon = Icon.createWithResource(this, R.drawable.ic_status_bar_tile)
             tile.updateTile()
             return
@@ -84,12 +84,20 @@ class StatusBarTileService : TileService() {
                 val isHidden = ImmersiveController.isCurrentlyHidden()
                 tile.state = if (isHidden) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
                 tile.label = "CleanBar"
-                tile.subtitle = if (isHidden) "Hidden" else "Visible"
+                setTileSubtitle(tile, if (isHidden) "Hidden" else "Visible")
                 tile.icon = Icon.createWithResource(this@StatusBarTileService, R.drawable.ic_status_bar_tile)
                 tile.updateTile()
             } catch (e: Throwable) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun setTileSubtitle(tile: Tile, text: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                tile.subtitle = text
+            } catch (ignored: Throwable) {}
         }
     }
 

@@ -86,6 +86,7 @@ fun MainScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(CleanBarDarkBg)
+            .safeDrawingPadding()
             .padding(24.dp)
     ) {
         Column(
@@ -97,7 +98,7 @@ fun MainScreen(
             // Top Status Pill
             Box(
                 modifier = Modifier
-                    .padding(top = 32.dp)
+                    .padding(top = 16.dp)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
@@ -211,7 +212,7 @@ fun MainScreen(
             }
 
             // Bottom Spacer
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
         }
     }

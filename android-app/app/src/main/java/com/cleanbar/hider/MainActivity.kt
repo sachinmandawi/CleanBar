@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
         Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
             if (requestCode == ShizukuManager.SHIZUKU_REQ_CODE) {
                 hasShizukuPermission = (grantResult == PackageManager.PERMISSION_GRANTED)
+                isShizukuActive = ShizukuManager.isShizukuAvailable()
             }
         }
 
