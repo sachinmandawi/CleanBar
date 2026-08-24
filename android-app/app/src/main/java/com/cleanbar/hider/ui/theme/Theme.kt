@@ -10,7 +10,6 @@ private val CleanBarDarkColorScheme = darkColorScheme(
     secondary = CleanBarTextSecondary,
     background = CleanBarDarkBg,
     surface = CleanBarDarkSurface,
-    surfaceVariant = CleanBarDarkCard,
     onBackground = CleanBarTextPrimary,
     onSurface = CleanBarTextPrimary,
     outline = CleanBarDarkBorder

@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
         checkShizukuStatus()
     }
 
+    // Defined as a field so it can be properly added AND removed from Shizuku
     private val requestPermissionResultListener =
         Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
             if (requestCode == ShizukuManager.SHIZUKU_REQ_CODE) {
@@ -37,6 +38,8 @@ class MainActivity : ComponentActivity() {
         try {
             Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
             Shizuku.addBinderDeadListener(binderDeadListener)
+            // Register permission result listener at activity start (not only on request)
+            Shizuku.addRequestPermissionResultListener(requestPermissionResultListener)
         } catch (ignored: Throwable) {}
 
         checkShizukuStatus()

@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.CleanBar" parent="android:Theme.Material.NoActionBar">
+        <!-- Transparent status bar so our app controls it fully -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Pure black window background — prevents white flash on cold start -->
         <item name="android:windowBackground">@android:color/black</item>
+        <!-- Required on Android 10+ to actually draw behind system bars -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <!-- Keep status bar icons dark or light based on our dark background -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>
