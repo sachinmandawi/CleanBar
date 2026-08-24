@@ -8,6 +8,7 @@ import android.os.VibratorManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -95,25 +96,30 @@ fun MainScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             
-            // Top Status Pill
+            // Top Status Pill (Clean flat capsule with ZERO rectangular ripple artifact)
             Box(
                 modifier = Modifier
                     .padding(top = 16.dp)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    color = CleanBarDarkSurface,
-                    shape = RoundedCornerShape(20.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, CleanBarDarkBorder),
-                    modifier = Modifier.clickable {
-                        vibrate()
-                        if (!hasShizukuPermission) onRequestPermission() else onRefreshStatus()
-                    }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(CleanBarDarkSurface)
+                        .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(20.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            vibrate()
+                            if (!hasShizukuPermission) onRequestPermission() else onRefreshStatus()
+                        }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
@@ -133,7 +139,7 @@ fun MainScreen(
             }
 
             // =================================================================
-            // CENTER: PURE 1-CLICK MASTER BUTTON
+            // CENTER: PURE 1-CLICK MASTER BUTTON (No square/gray ripple box)
             // =================================================================
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -149,7 +155,11 @@ fun MainScreen(
                             if (isHidden) Color(0xFF7F2D2D) else Color(0xFF2B4C7E),
                             CircleShape
                         )
-                        .clickable(enabled = !isProcessing) {
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            enabled = !isProcessing
+                        ) {
                             vibrate()
                             if (!isShizukuActive || !hasShizukuPermission) {
                                 onRequestPermission()
