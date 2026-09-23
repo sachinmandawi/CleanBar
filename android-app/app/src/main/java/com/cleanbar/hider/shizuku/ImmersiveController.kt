@@ -29,7 +29,8 @@ object ImmersiveController {
         // Step 1: Re-enable all status bar icons
         ShizukuManager.executeCommand("cmd statusbar send-disable-flag none")
 
-        // Step 2: Remove immersive policy
+        // Step 2: Remove immersive policy cleanly (delete key + null fallback)
+        ShizukuManager.executeCommand("settings delete global policy_control")
         val policyResult = ShizukuManager.executeCommand(
             "settings put global policy_control null"
         )

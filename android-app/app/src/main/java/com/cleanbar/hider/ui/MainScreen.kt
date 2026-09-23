@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -61,7 +62,8 @@ fun MainScreen(
     isShizukuActive: Boolean,
     hasShizukuPermission: Boolean,
     onRequestPermission: () -> Unit,
-    onRefreshStatus: () -> Unit
+    onRefreshStatus: () -> Unit,
+    onNavigateToAbout: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -96,45 +98,74 @@ fun MainScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             
-            // Top Status Pill (Clean flat capsule with ZERO rectangular ripple artifact)
+            // Top Bar with Status Pill and 3-Dot Overflow Menu
             Box(
                 modifier = Modifier
                     .padding(top = 16.dp)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
             ) {
+                // Centered Shizuku Status Pill
+                Box(
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(CleanBarDarkSurface)
+                            .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(20.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                vibrate()
+                                if (!hasShizukuPermission) onRequestPermission() else onRefreshStatus()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isShizukuActive && hasShizukuPermission) CleanBarGreenText else CleanBarRedText)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isShizukuActive && hasShizukuPermission) "Shizuku Ready" else "Tap to Authorize Shizuku",
+                                color = CleanBarTextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                // Top-Right 3-Dot Button
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .align(Alignment.CenterEnd)
+                        .size(36.dp)
+                        .clip(CircleShape)
                         .background(CleanBarDarkSurface)
-                        .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, CleanBarDarkBorder, CircleShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
                             vibrate()
-                            if (!hasShizukuPermission) onRequestPermission() else onRefreshStatus()
-                        }
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                            onNavigateToAbout()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(if (isShizukuActive && hasShizukuPermission) CleanBarGreenText else CleanBarRedText)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isShizukuActive && hasShizukuPermission) "Shizuku Ready" else "Tap to Authorize Shizuku",
-                            color = CleanBarTextPrimary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "About Developer & App",
+                        tint = CleanBarTextPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
 
