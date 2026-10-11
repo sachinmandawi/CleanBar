@@ -12,7 +12,8 @@ import {
   ExternalLink,
   User,
   RefreshCw,
-  Download
+  Download,
+  Code
 } from 'lucide-react';
 
 function UpiLogo({ className = "w-5 h-5" }) {
@@ -45,7 +46,7 @@ const GITHUB_REPO_URL = "https://github.com/sachinmandawi/CleanBar";
 const GITHUB_ISSUES_URL = "https://github.com/sachinmandawi/CleanBar/issues";
 const UPI_ID = "darkcaptain@ybl";
 const BINANCE_UID = "1138545342";
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('main'); // 'main' | 'about'
@@ -240,14 +241,9 @@ export default function App() {
         {/* Developer Card (Minimal) */}
         <div className="w-full mt-3">
           <div className="w-full bg-[#202020] border border-[#2A2A2A] rounded-2xl p-3 flex items-center gap-3.5">
-            <img
-              src="/dev_avatar.jpg"
-              alt="Sachin Mandawi"
-              onError={(e) => {
-                e.target.src = 'https://avatars.githubusercontent.com/u/197530811?v=4';
-              }}
-              className="w-10 h-10 rounded-full object-cover border border-[#3E3E3E] shrink-0"
-            />
+            <div className="w-10 h-10 rounded-full bg-[#182330] border border-[#2B4C7E] flex items-center justify-center text-[#529CCA] shrink-0">
+              <Code className="w-5 h-5" />
+            </div>
             <div>
               <div className="font-medium text-sm text-[#EBEBEB]">Sachin Mandawi</div>
               <div className="text-xs text-[#787774]">Developer</div>

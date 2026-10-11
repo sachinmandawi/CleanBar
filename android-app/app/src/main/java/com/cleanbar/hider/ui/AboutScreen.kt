@@ -256,15 +256,21 @@ fun AboutScreen(
                     .padding(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.dev_avatar),
-                        contentDescription = "Sachin Mandawi",
-                        contentScale = ContentScale.Crop,
+                    Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .border(1.dp, Color(0xFF3E3E3E), CircleShape)
-                    )
+                            .background(Color(0xFF162332))
+                            .border(1.dp, Color(0xFF263F5E), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Code,
+                            contentDescription = "Developer",
+                            tint = CleanBarBlueText,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
@@ -359,7 +365,7 @@ fun AboutScreen(
                         )
                     } else {
                         Text(
-                            text = "v1.1.0",
+                            text = "v${UpdateChecker.CURRENT_VERSION}",
                             color = CleanBarTextSecondary,
                             fontSize = 11.sp
                         )
