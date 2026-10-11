@@ -30,6 +30,21 @@ class MainActivity : ComponentActivity() {
         checkShizukuStatus()
     }
 
+    private val notificationPermissionLauncher =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { /* handled */ }
+
+    fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     // Defined as a field so it can be properly added AND removed from Shizuku
     private val requestPermissionResultListener =
         Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
@@ -83,6 +98,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToAbout = {
                                     currentScreen = AppScreen.ABOUT
+                                },
+                                onRequestNotificationPermission = {
+                                    requestNotificationPermission()
                                 }
                             )
                         }

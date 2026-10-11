@@ -236,7 +236,7 @@ fun AboutScreen(
                         .padding(horizontal = 10.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = "v1.1.0",
+                        text = "v${UpdateChecker.CURRENT_VERSION}",
                         color = CleanBarGreenText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold

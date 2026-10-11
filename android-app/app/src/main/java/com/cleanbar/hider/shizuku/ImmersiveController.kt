@@ -56,9 +56,28 @@ object ImmersiveController {
             val res = ShizukuManager.executeCommand("settings get global policy_control")
             val policy = res.getOrDefault("")
             // "null" string means no policy set — treat as visible
-            policy.isNotEmpty() &&
+            val hasPolicy = policy.isNotEmpty() &&
                 policy != "null" &&
                 (policy.contains("immersive.status") || policy.contains("immersive.full"))
+
+            if (!hasPolicy) return false
+
+            // On aggressive OEM skins (Vivo OriginOS, Xiaomi HyperOS), verify dumpsys statusbar
+            // If the lockscreen reset mDisabled1 to 0x0, the status bar is actually visible
+            val dumpRes = ShizukuManager.executeCommand("dumpsys statusbar")
+            val dump = dumpRes.getOrDefault("")
+            if (dump.isNotEmpty()) {
+                val match = Regex("""mDisabled1=0x([0-9a-fA-F]+)""").find(dump)
+                if (match != null) {
+                    val hex = match.groupValues[1]
+                    val flagVal = hex.toLongOrNull(16) ?: 0L
+                    if (flagVal == 0L) {
+                        return false
+                    }
+                }
+            }
+
+            true
         } catch (e: Throwable) {
             false
         }

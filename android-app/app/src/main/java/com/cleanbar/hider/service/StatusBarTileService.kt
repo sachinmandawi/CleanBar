@@ -49,11 +49,17 @@ class StatusBarTileService : TileService() {
             try {
                 if (isCurrentlyActive) {
                     ImmersiveController.resetToDefault()
+                    com.cleanbar.hider.util.PreferencesHelper.setTargetHidden(this@StatusBarTileService, false)
+                    KeepAliveService.stop(this@StatusBarTileService)
                     tile.state = Tile.STATE_INACTIVE
                     tile.label = "CleanBar"
                     setTileSubtitle(tile, "Visible")
                 } else {
                     ImmersiveController.hideStatusBarGlobally()
+                    com.cleanbar.hider.util.PreferencesHelper.setTargetHidden(this@StatusBarTileService, true)
+                    if (com.cleanbar.hider.util.PreferencesHelper.isPersistentModeEnabled(this@StatusBarTileService)) {
+                        KeepAliveService.start(this@StatusBarTileService)
+                    }
                     tile.state = Tile.STATE_ACTIVE
                     tile.label = "CleanBar"
                     setTileSubtitle(tile, "Hidden")

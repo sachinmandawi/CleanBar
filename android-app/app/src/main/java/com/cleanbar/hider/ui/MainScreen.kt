@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -25,12 +26,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.cleanbar.hider.service.KeepAliveService
 import com.cleanbar.hider.shizuku.ImmersiveController
 import com.cleanbar.hider.ui.theme.*
+import com.cleanbar.hider.util.PreferencesHelper
 import kotlinx.coroutines.launch
 
 fun doVibrate(context: Context) {
@@ -63,13 +69,17 @@ fun MainScreen(
     hasShizukuPermission: Boolean,
     onRequestPermission: () -> Unit,
     onRefreshStatus: () -> Unit,
-    onNavigateToAbout: () -> Unit = {}
+    onNavigateToAbout: () -> Unit = {},
+    onRequestNotificationPermission: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     var isHidden by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
+    var isPersistentMode by remember {
+        mutableStateOf(PreferencesHelper.isPersistentModeEnabled(context))
+    }
 
     fun vibrate() {
         try {
@@ -82,6 +92,24 @@ fun MainScreen(
     LaunchedEffect(isShizukuActive, hasShizukuPermission) {
         if (isShizukuActive && hasShizukuPermission) {
             isHidden = ImmersiveController.isCurrentlyHidden()
+        }
+    }
+
+    // Continuously keep state updated whenever activity resumes
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, isShizukuActive, hasShizukuPermission) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (isShizukuActive && hasShizukuPermission) {
+                    coroutineScope.launch {
+                        isHidden = ImmersiveController.isCurrentlyHidden()
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -203,11 +231,18 @@ fun MainScreen(
                                         val res = ImmersiveController.resetToDefault()
                                         if (res.isSuccess) {
                                             isHidden = false
+                                            PreferencesHelper.setTargetHidden(context, false)
+                                            KeepAliveService.stop(context)
                                         }
                                     } else {
                                         val res = ImmersiveController.hideStatusBarGlobally()
                                         if (res.isSuccess) {
                                             isHidden = true
+                                            PreferencesHelper.setTargetHidden(context, true)
+                                            if (isPersistentMode) {
+                                                onRequestNotificationPermission()
+                                                KeepAliveService.start(context)
+                                            }
                                         }
                                     }
                                 } catch (e: Throwable) {
@@ -252,8 +287,91 @@ fun MainScreen(
                 )
             }
 
-            // Bottom Spacer
-            Spacer(modifier = Modifier.height(16.dp))
+            // Bottom Section: Persistent Auto-Reapply Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(CleanBarDarkSurface)
+                    .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(20.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        vibrate()
+                        val newState = !isPersistentMode
+                        isPersistentMode = newState
+                        PreferencesHelper.setPersistentModeEnabled(context, newState)
+                        if (newState) {
+                            onRequestNotificationPermission()
+                            if (isHidden) {
+                                KeepAliveService.start(context)
+                            }
+                        } else {
+                            KeepAliveService.stop(context)
+                        }
+                    }
+                    .padding(horizontal = 18.dp, vertical = 14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = if (isPersistentMode) CleanBarGreenText else CleanBarTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Auto-Reapply on Unlock",
+                                color = CleanBarTextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Keeps status bar hidden after screen lock. Fixes reset on Vivo, Xiaomi & OnePlus.",
+                            color = CleanBarTextSecondary,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
+                    }
+
+                    Switch(
+                        checked = isPersistentMode,
+                        onCheckedChange = { newState ->
+                            vibrate()
+                            isPersistentMode = newState
+                            PreferencesHelper.setPersistentModeEnabled(context, newState)
+                            if (newState) {
+                                onRequestNotificationPermission()
+                                if (isHidden) {
+                                    KeepAliveService.start(context)
+                                }
+                            } else {
+                                KeepAliveService.stop(context)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF2B4C7E),
+                            uncheckedThumbColor = Color(0xFF8E99AF),
+                            uncheckedTrackColor = Color(0xFF1E2330),
+                            uncheckedBorderColor = CleanBarDarkBorder
+                        )
+                    )
+                }
+            }
 
         }
     }
