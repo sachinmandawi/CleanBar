@@ -89,10 +89,8 @@ settings put global policy_control null
 
 ## 🚀 What's New in v1.3.0
 
-- 🔋 **Background Running Permission:** Added battery optimization exemption support to prevent aggressive OS killers (Xiaomi, Vivo, iQOO, Samsung) and ensure 100% reliable Auto-Reapply on Unlock.
-- 🛡️ **Smooth Real-Time State Sync:** Fixed status bar flicker when toggling back to Visible mode.
-- 🔒 **1-Tap System Restore:** Added safe factory default restoration before uninstalling.
-- 🎨 **New Eye-Catching Store Assets:** Complete panoramic showcase & modern typography across all screenshots.
+- Added background running permission support to keep Auto-Reapply active seamlessly across screen locks.
+- Added 1-click 'Restore All to System Default' safety reset before uninstalling.
 
 ---
 
