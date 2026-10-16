@@ -10,6 +10,51 @@ import java.io.InputStreamReader
 object ShizukuManager {
 
     const val SHIZUKU_REQ_CODE = 1001
+    private const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
+
+    fun isShizukuInstalled(context: android.content.Context): Boolean {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(
+                    SHIZUKU_PACKAGE,
+                    PackageManager.PackageInfoFlags.of(0)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(SHIZUKU_PACKAGE, 0)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun openShizuku(context: android.content.Context): Boolean {
+        return try {
+            val intent = context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE)
+            if (intent != null) {
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun openShizukuPlayStore(context: android.content.Context) {
+        try {
+            val intent = android.content.Intent(
+                android.content.Intent.ACTION_VIEW,
+                android.net.Uri.parse("https://play.google.com/store/apps/details?id=$SHIZUKU_PACKAGE")
+            ).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (ignored: Throwable) {}
+    }
 
     fun isShizukuAvailable(): Boolean {
         return try {

@@ -5,6 +5,8 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.widget.Toast
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,8 +15,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -37,6 +39,7 @@ import com.cleanbar.hider.service.KeepAliveService
 import com.cleanbar.hider.shizuku.ImmersiveController
 import com.cleanbar.hider.ui.theme.*
 import com.cleanbar.hider.util.PreferencesHelper
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 fun doVibrate(context: Context) {
@@ -75,10 +78,22 @@ fun MainScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
-    var isHidden by remember { mutableStateOf(false) }
+    var isHidden by remember { mutableStateOf(PreferencesHelper.isTargetHidden(context)) }
     var isProcessing by remember { mutableStateOf(false) }
     var isPersistentMode by remember {
         mutableStateOf(PreferencesHelper.isPersistentModeEnabled(context))
+    }
+
+    var bottomToastMessage by remember { mutableStateOf<String?>(null) }
+
+    fun triggerBottomToast(message: String) {
+        bottomToastMessage = message
+        coroutineScope.launch {
+            delay(2800)
+            if (bottomToastMessage == message) {
+                bottomToastMessage = null
+            }
+        }
     }
 
     fun vibrate() {
@@ -88,22 +103,19 @@ fun MainScreen(
         doVibrate(context)
     }
 
-    // Sync state with actual device status bar state on launch
-    LaunchedEffect(isShizukuActive, hasShizukuPermission) {
-        if (isShizukuActive && hasShizukuPermission) {
-            isHidden = ImmersiveController.isCurrentlyHidden()
-        }
+    // Sync state with actual device status bar state on launch and when Shizuku status updates
+    LaunchedEffect(hasShizukuPermission, isShizukuActive) {
+        isHidden = ImmersiveController.isCurrentlyHidden(context)
     }
 
     // Continuously keep state updated whenever activity resumes
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, isShizukuActive, hasShizukuPermission) {
+    DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                if (isShizukuActive && hasShizukuPermission) {
-                    coroutineScope.launch {
-                        isHidden = ImmersiveController.isCurrentlyHidden()
-                    }
+                coroutineScope.launch {
+                    isHidden = ImmersiveController.isCurrentlyHidden(context)
+                    isPersistentMode = PreferencesHelper.isPersistentModeEnabled(context)
                 }
             }
         }
@@ -125,57 +137,17 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            
-            // Top Bar with Status Pill and 3-Dot Overflow Menu
+
+            // Top Bar: Pure 3-Dot Button on Top-Right (No clutter)
             Box(
                 modifier = Modifier
                     .padding(top = 16.dp)
                     .fillMaxWidth()
             ) {
-                // Centered Shizuku Status Pill
-                Box(
-                    modifier = Modifier.align(Alignment.Center)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(CleanBarDarkSurface)
-                            .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(20.dp))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                vibrate()
-                                if (!hasShizukuPermission) onRequestPermission() else onRefreshStatus()
-                            }
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isShizukuActive && hasShizukuPermission) CleanBarGreenText else CleanBarRedText)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isShizukuActive && hasShizukuPermission) "Shizuku Ready" else "Tap to Authorize Shizuku",
-                                color = CleanBarTextPrimary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                // Top-Right 3-Dot Button
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .size(36.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .background(CleanBarDarkSurface)
                         .border(1.dp, CleanBarDarkBorder, CircleShape)
@@ -190,7 +162,7 @@ fun MainScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "About Developer & App",
+                        contentDescription = "Settings & Modes",
                         tint = CleanBarTextPrimary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -198,7 +170,7 @@ fun MainScreen(
             }
 
             // =================================================================
-            // CENTER: PURE 1-CLICK MASTER BUTTON (No square/gray ripple box)
+            // CENTER: PURE 1-CLICK MASTER BUTTON
             // =================================================================
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -220,33 +192,57 @@ fun MainScreen(
                             enabled = !isProcessing
                         ) {
                             vibrate()
-                            if (!isShizukuActive || !hasShizukuPermission) {
-                                onRequestPermission()
+                            if (!isShizukuActive) {
+                                if (com.cleanbar.hider.shizuku.ShizukuManager.isShizukuInstalled(context)) {
+                                    triggerBottomToast("Please start Shizuku service. Opening Shizuku...")
+                                    com.cleanbar.hider.shizuku.ShizukuManager.openShizuku(context)
+                                } else {
+                                    triggerBottomToast("Shizuku app not found. Opening Play Store...")
+                                    com.cleanbar.hider.shizuku.ShizukuManager.openShizukuPlayStore(context)
+                                }
                                 return@clickable
                             }
+                            if (!hasShizukuPermission) {
+                                onRequestPermission()
+                                triggerBottomToast("Please allow Shizuku permission")
+                                return@clickable
+                            }
+
                             isProcessing = true
                             coroutineScope.launch {
                                 try {
                                     if (isHidden) {
-                                        val res = ImmersiveController.resetToDefault()
+                                        // 1. Immediately mark not hidden and stop background service
+                                        PreferencesHelper.setTargetHidden(context, false)
+                                        KeepAliveService.stop(context)
+
+                                        // 2. Perform clean factory restore
+                                        val res = ImmersiveController.resetToDefault(context)
                                         if (res.isSuccess) {
                                             isHidden = false
-                                            PreferencesHelper.setTargetHidden(context, false)
-                                            KeepAliveService.stop(context)
+                                            triggerBottomToast("✓ Status bar visible")
+                                        } else {
+                                            PreferencesHelper.setTargetHidden(context, true)
+                                            triggerBottomToast(res.exceptionOrNull()?.message ?: "Failed to make visible")
                                         }
                                     } else {
-                                        val res = ImmersiveController.hideStatusBarGlobally()
+                                        PreferencesHelper.setTargetHidden(context, true)
+                                        val res = ImmersiveController.hideStatusBar(context)
                                         if (res.isSuccess) {
                                             isHidden = true
-                                            PreferencesHelper.setTargetHidden(context, true)
-                                            if (isPersistentMode) {
+                                            if (PreferencesHelper.isPersistentModeEnabled(context)) {
                                                 onRequestNotificationPermission()
                                                 KeepAliveService.start(context)
                                             }
+                                            triggerBottomToast("✓ Status bar hidden")
+                                        } else {
+                                            PreferencesHelper.setTargetHidden(context, false)
+                                            triggerBottomToast(res.exceptionOrNull()?.message ?: "Failed to hide status bar")
                                         }
                                     }
                                 } catch (e: Throwable) {
                                     e.printStackTrace()
+                                    triggerBottomToast("Operation failed: ${e.message}")
                                 } finally {
                                     isProcessing = false
                                 }
@@ -262,9 +258,9 @@ fun MainScreen(
                             imageVector = if (isHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null,
                             tint = if (isHidden) Color(0xFFFF8585) else Color(0xFF6CA8E8),
-                            modifier = Modifier.size(56.dp)
+                            modifier = Modifier.size(54.dp)
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = if (isHidden) "HIDDEN" else "VISIBLE",
                             color = if (isHidden) Color(0xFFFF8585) else Color(0xFF6CA8E8),
@@ -272,13 +268,21 @@ fun MainScreen(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (isHidden) "TAP TO SHOW" else "TAP TO HIDE",
+                            color = if (isHidden) Color(0xFF4DAB9A) else CleanBarTextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.5.sp
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = if (isHidden) "Status Bar is 100% HIDDEN\nTap button to make it VISIBLE" else "Status Bar is VISIBLE\nTap button to HIDE everything",
+                    text = if (isHidden) "Status Bar is HIDDEN\nTap button to make it VISIBLE" else "Status Bar is VISIBLE\nTap button to make it HIDDEN",
                     color = if (isHidden) Color(0xFFFF8585) else CleanBarTextSecondary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
@@ -287,92 +291,50 @@ fun MainScreen(
                 )
             }
 
-            // Bottom Section: Persistent Auto-Reapply Card
+            // Bottom Spacer (Balances top bar for center alignment)
+            Spacer(modifier = Modifier.size(38.dp))
+
+        }
+
+        // ==========================================
+        // FLOATING BOTTOM TOAST (No OEM Truncation)
+        // ==========================================
+        AnimatedVisibility(
+            visible = bottomToastMessage != null,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(CleanBarDarkSurface)
-                    .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(20.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        vibrate()
-                        val newState = !isPersistentMode
-                        isPersistentMode = newState
-                        PreferencesHelper.setPersistentModeEnabled(context, newState)
-                        if (newState) {
-                            onRequestNotificationPermission()
-                            if (isHidden) {
-                                KeepAliveService.start(context)
-                            }
-                        } else {
-                            KeepAliveService.stop(context)
-                        }
-                    }
-                    .padding(horizontal = 18.dp, vertical = 14.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFF252525))
+                    .border(1.dp, Color(0xFF3E3E3E), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.widthIn(max = 330.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = null,
-                                tint = if (isPersistentMode) CleanBarGreenText else CleanBarTextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Auto-Reapply on Unlock",
-                                color = CleanBarTextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Keeps status bar hidden after screen lock. Fixes reset on Vivo, Xiaomi & OnePlus.",
-                            color = CleanBarTextSecondary,
-                            fontSize = 11.sp,
-                            lineHeight = 15.sp
-                        )
-                    }
-
-                    Switch(
-                        checked = isPersistentMode,
-                        onCheckedChange = { newState ->
-                            vibrate()
-                            isPersistentMode = newState
-                            PreferencesHelper.setPersistentModeEnabled(context, newState)
-                            if (newState) {
-                                onRequestNotificationPermission()
-                                if (isHidden) {
-                                    KeepAliveService.start(context)
-                                }
-                            } else {
-                                KeepAliveService.stop(context)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF2B4C7E),
-                            uncheckedThumbColor = Color(0xFF8E99AF),
-                            uncheckedTrackColor = Color(0xFF1E2330),
-                            uncheckedBorderColor = CleanBarDarkBorder
-                        )
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = CleanBarBlueText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = bottomToastMessage ?: "",
+                        color = CleanBarTextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
             }
-
         }
     }
 }

@@ -25,24 +25,30 @@
 
 <div align="center">
 
-| 🟢 Status Bar Visible | 🔴 Status Bar 100% Hidden |
-| :---: | :---: |
-| <img src="screenshots/CleanBar_VISIBLE.png" width="320" alt="CleanBar Visible State" /> | <img src="screenshots/CleanBar_HIDDEN.png" width="320" alt="CleanBar Hidden State" /> |
-| *Standard System Status Bar* | *100% Pure Clean Screen (Zero Clock, Battery, or Icons)* |
+<img src="screenshots/CleanBar_Showcase.jpg" width="100%" alt="CleanBar App Showcase Overview" />
+
+<br/><br/>
+
+| ⚡ 1-Click Hide | ✨ AMOLED Minimal | 🔄 Instant Toggle | 🛡️ Auto-Reapply | 🚀 In-App Updates | 🔒 Safe 1-Tap Reset |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| <img src="screenshots/CleanBar_Slide_1.jpg" width="160" alt="Slide 1" /> | <img src="screenshots/CleanBar_Slide_2.jpg" width="160" alt="Slide 2" /> | <img src="screenshots/CleanBar_Slide_3.jpg" width="160" alt="Slide 3" /> | <img src="screenshots/CleanBar_Slide_4.jpg" width="160" alt="Slide 4" /> | <img src="screenshots/CleanBar_Slide_5.jpg" width="160" alt="Slide 5" /> | <img src="screenshots/CleanBar_Slide_6.jpg" width="160" alt="Slide 6" /> |
 
 </div>
 
 ---
 
-## ✨ Features
+## ✨ Features (v1.3.0)
 
 - ⚡ **1-Tap Master Toggle:** Instantly hide or restore all status bar elements with a single click.
 - 🚫 **Complete Icon & Clock Removal:** Disables system icons, clock, battery percentage, Wi-Fi, 5G, and notification icons seamlessly without root.
-- 🎛️ **Quick Settings Tile:** Add the CleanBar tile to your notification quick settings shade to toggle status bar visibility from anywhere.
-- 🖤 **Clean Minimalist Dark UI:** Ultra-clean, distraction-free aesthetic with pure flat colors and zero toast popups.
+- 🛡️ **Auto-Reapply on Unlock:** Keeps your status bar hidden seamlessly across screen locks and device wakeups.
+- 🔒 **100% Reversible System Reset:** Dedicated 1-tap "Restore All to System Default" to safely reset all flags and configurations before uninstalling.
+- 🎛️ **Quick Settings Tile:** Add the CleanBar tile to your notification shade to toggle status bar visibility from anywhere.
+- 🖤 **Pure AMOLED Dark UI:** Pitch-black background crafted specifically for OLED screens to save battery and look gorgeous.
+- 🚀 **In-App Update Checker:** Check for the latest releases with 1-tap right from the About screen.
 - 📳 **Haptic Feedback:** Crisp physical vibration feedback on every button tap.
 - 🔒 **No Root Required:** Utilizes the privileged [Shizuku](https://shizuku.rikka.app/) Binder service via Wireless Debugging / ADB.
-- 🛡️ **Fail-Safe State Sync:** Automatically queries and synchronizes real device status on app launch and resume.
+- 🛡️ **Real-Time State Sync:** Automatically queries and synchronizes real device status on app launch and resume.
 
 ---
 
@@ -78,6 +84,15 @@ settings put global policy_control immersive.status=*
 cmd statusbar send-disable-flag none
 settings put global policy_control null
 ```
+
+---
+
+## 🚀 What's New in v1.3.0
+
+- 🔋 **Background Running Permission:** Added battery optimization exemption support to prevent aggressive OS killers (Xiaomi, Vivo, iQOO, Samsung) and ensure 100% reliable Auto-Reapply on Unlock.
+- 🛡️ **Smooth Real-Time State Sync:** Fixed status bar flicker when toggling back to Visible mode.
+- 🔒 **1-Tap System Restore:** Added safe factory default restoration before uninstalling.
+- 🎨 **New Eye-Catching Store Assets:** Complete panoramic showcase & modern typography across all screenshots.
 
 ---
 

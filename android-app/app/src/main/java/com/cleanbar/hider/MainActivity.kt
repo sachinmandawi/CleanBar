@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
                 AnimatedContent(
                     targetState = currentScreen,
                     transitionSpec = {
-                        if (targetState == AppScreen.ABOUT) {
+                        if (targetState.ordinal > initialState.ordinal) {
                             (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
                                 slideOutHorizontally { width -> -width / 3 } + fadeOut()
                             )
@@ -108,6 +108,17 @@ class MainActivity : ComponentActivity() {
                             AboutScreen(
                                 onBack = {
                                     currentScreen = AppScreen.MAIN
+                                },
+                                onRequestNotificationPermission = {
+                                    requestNotificationPermission()
+                                },
+                                isShizukuActive = isShizukuActive,
+                                hasShizukuPermission = hasShizukuPermission,
+                                onRequestShizukuPermission = {
+                                    ShizukuManager.requestPermission(requestPermissionResultListener)
+                                },
+                                onRefreshShizukuStatus = {
+                                    checkShizukuStatus()
                                 }
                             )
                         }

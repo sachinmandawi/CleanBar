@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -38,8 +39,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.cleanbar.hider.R
+import com.cleanbar.hider.service.KeepAliveService
+import com.cleanbar.hider.shizuku.ImmersiveController
+import com.cleanbar.hider.shizuku.ShizukuManager
 import com.cleanbar.hider.ui.theme.*
+import com.cleanbar.hider.util.PreferencesHelper
 import com.cleanbar.hider.util.UpdateChecker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -52,7 +59,12 @@ private const val BINANCE_UID = "1138545342"
 
 @Composable
 fun AboutScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onRequestNotificationPermission: () -> Unit = {},
+    isShizukuActive: Boolean = false,
+    hasShizukuPermission: Boolean = false,
+    onRequestShizukuPermission: () -> Unit = {},
+    onRefreshShizukuStatus: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -62,6 +74,36 @@ fun AboutScreen(
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateChecker.UpdateResult?>(null) }
     var showUpdateDialog by remember { mutableStateOf(false) }
+
+    var isPersistentMode by remember {
+        mutableStateOf(PreferencesHelper.isPersistentModeEnabled(context))
+    }
+
+    var isBatteryOptimized by remember {
+        mutableStateOf(
+            runCatching {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                pm?.isIgnoringBatteryOptimizations(context.packageName) ?: false
+            }.getOrDefault(false)
+        )
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                isBatteryOptimized = pm?.isIgnoringBatteryOptimizations(context.packageName) ?: false
+                onRefreshShizukuStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
 
     // Bottom Toast State
     var bottomToastMessage by remember { mutableStateOf<String?>(null) }
@@ -80,6 +122,8 @@ fun AboutScreen(
     BackHandler(enabled = true) {
         if (showUpdateDialog) {
             showUpdateDialog = false
+        } else if (showRestoreConfirmDialog) {
+            showRestoreConfirmDialog = false
         } else {
             doVibrate(context)
             onBack()
@@ -172,6 +216,105 @@ fun AboutScreen(
         }
     }
 
+    // Restore to Default Confirmation Dialog
+    if (showRestoreConfirmDialog) {
+        Dialog(onDismissRequest = { showRestoreConfirmDialog = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(CleanBarDarkSurface)
+                    .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(24.dp))
+                    .padding(24.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF2E1919))
+                            .border(1.dp, Color(0xFF6B2D2D), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restore,
+                            contentDescription = null,
+                            tint = Color(0xFFFF7B7B),
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Restore All to Default?",
+                        color = CleanBarTextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "This will restore all status bar icons, disable flags, and clear custom configurations. Recommended before uninstalling CleanBar.",
+                        color = CleanBarTextSecondary,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 16.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { showRestoreConfirmDialog = false },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CleanBarDarkBg,
+                                contentColor = CleanBarTextSecondary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CleanBarDarkBorder),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancel", fontSize = 13.sp)
+                        }
+
+                        Button(
+                            onClick = {
+                                showRestoreConfirmDialog = false
+                                doVibrate(context)
+                                coroutineScope.launch {
+                                    try {
+                                        ImmersiveController.resetToDefault(context)
+                                        PreferencesHelper.setTargetHidden(context, false)
+                                        PreferencesHelper.setPersistentModeEnabled(context, false)
+                                        isPersistentMode = false
+                                        KeepAliveService.stop(context)
+                                        triggerBottomToast("✓ Status bar fully restored to default")
+                                    } catch (e: Throwable) {
+                                        e.printStackTrace()
+                                        triggerBottomToast("Failed to restore default")
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF8B2525),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1.2f)
+                        ) {
+                            Text("Restore", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -225,70 +368,321 @@ fun AboutScreen(
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF15261E))
-                        .border(1.dp, Color(0xFF224E3A), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = "v${UpdateChecker.CURRENT_VERSION}",
-                        color = CleanBarGreenText,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
             }
 
+
+
             // ==========================================
-            // Developer Card (Ultra Minimal)
+            // Settings Section
             // ==========================================
+            MinimalSectionTitle(title = "SETTINGS")
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Shizuku Service & Permission Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(CleanBarDarkSurface)
                     .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(16.dp))
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF162332))
-                            .border(1.dp, Color(0xFF263F5E), CircleShape),
-                        contentAlignment = Alignment.Center
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Code,
-                            contentDescription = "Developer",
-                            tint = CleanBarBlueText,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        doVibrate(context)
+                        if (!isShizukuActive) {
+                            if (ShizukuManager.isShizukuInstalled(context)) {
+                                triggerBottomToast("Please start Shizuku service. Opening Shizuku...")
+                                ShizukuManager.openShizuku(context)
+                            } else {
+                                triggerBottomToast("Shizuku app not found. Opening Play Store...")
+                                ShizukuManager.openShizukuPlayStore(context)
+                            }
+                        } else if (!hasShizukuPermission) {
+                            onRequestShizukuPermission()
+                            triggerBottomToast("Please allow Shizuku popup permission")
+                        } else {
+                            ShizukuManager.openShizuku(context)
+                            triggerBottomToast("To revoke, toggle CleanBar off in Shizuku")
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (hasShizukuPermission) Color(0xFF15261E)
+                                    else if (isShizukuActive) Color(0xFF1E2F3A)
+                                    else Color(0xFF282014)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Terminal,
+                                contentDescription = null,
+                                tint = if (hasShizukuPermission) CleanBarGreenText
+                                else if (isShizukuActive) CleanBarBlueText
+                                else Color(0xFFFFB84D),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Shizuku Permission",
+                                color = CleanBarTextPrimary,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (hasShizukuPermission) "Authorized • Status bar control active"
+                                else if (isShizukuActive) "Service Running • Tap to allow popup"
+                                else if (ShizukuManager.isShizukuInstalled(context)) "Service Stopped • Tap to start"
+                                else "Not Installed • Tap for Play Store",
+                                color = CleanBarTextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                    Column {
-                        Text(
-                            text = "Sachin Mandawi",
-                            color = CleanBarTextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
+                    Switch(
+                        checked = hasShizukuPermission,
+                        onCheckedChange = { _ ->
+                            doVibrate(context)
+                            if (!isShizukuActive) {
+                                if (ShizukuManager.isShizukuInstalled(context)) {
+                                    triggerBottomToast("Please start Shizuku service. Opening Shizuku...")
+                                    ShizukuManager.openShizuku(context)
+                                } else {
+                                    triggerBottomToast("Shizuku app not found. Opening Play Store...")
+                                    ShizukuManager.openShizukuPlayStore(context)
+                                }
+                            } else if (!hasShizukuPermission) {
+                                onRequestShizukuPermission()
+                                triggerBottomToast("Please allow Shizuku popup permission")
+                            } else {
+                                ShizukuManager.openShizuku(context)
+                                triggerBottomToast("To revoke, toggle CleanBar off in Shizuku")
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF2B4C7E),
+                            uncheckedThumbColor = Color(0xFF8E99AF),
+                            uncheckedTrackColor = Color(0xFF1E2330),
+                            uncheckedBorderColor = CleanBarDarkBorder
                         )
-                        Text(
-                            text = "Developer",
-                            color = CleanBarTextSecondary,
-                            fontSize = 11.sp
-                        )
-                    }
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Auto-Reapply on Unlock Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CleanBarDarkSurface)
+                    .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(16.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        doVibrate(context)
+                        val newState = !isPersistentMode
+                        isPersistentMode = newState
+                        PreferencesHelper.setPersistentModeEnabled(context, newState)
+                        if (newState) {
+                            onRequestNotificationPermission()
+                            if (PreferencesHelper.isTargetHidden(context)) {
+                                KeepAliveService.start(context)
+                            }
+                            triggerBottomToast("Auto-Reapply Enabled")
+                        } else {
+                            KeepAliveService.stop(context)
+                            triggerBottomToast("Auto-Reapply Disabled")
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isPersistentMode) Color(0xFF17241F) else Color(0xFF161616)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = if (isPersistentMode) CleanBarGreenText else CleanBarTextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Auto-Reapply on Unlock",
+                                color = CleanBarTextPrimary,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Keeps hidden across screen locks",
+                                color = CleanBarTextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Switch(
+                        checked = isPersistentMode,
+                        onCheckedChange = { newState ->
+                            doVibrate(context)
+                            isPersistentMode = newState
+                            PreferencesHelper.setPersistentModeEnabled(context, newState)
+                            if (newState) {
+                                onRequestNotificationPermission()
+                                if (PreferencesHelper.isTargetHidden(context)) {
+                                    KeepAliveService.start(context)
+                                }
+                                triggerBottomToast("Auto-Reapply Enabled")
+                            } else {
+                                KeepAliveService.stop(context)
+                                triggerBottomToast("Auto-Reapply Disabled")
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF2B4C7E),
+                            uncheckedThumbColor = Color(0xFF8E99AF),
+                            uncheckedTrackColor = Color(0xFF1E2330),
+                            uncheckedBorderColor = CleanBarDarkBorder
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Ignore Battery Optimization Card
+            MinimalCard(
+                icon = Icons.Default.Bolt,
+                iconBg = if (isBatteryOptimized) Color(0xFF15261E) else Color(0xFF282014),
+                iconTint = if (isBatteryOptimized) CleanBarGreenText else Color(0xFFFFB84D),
+                title = "Ignore Battery Optimization",
+                subtitle = "Prevents iQOO, Vivo & Xiaomi from killing app",
+                trailingContent = {
+                    if (isBatteryOptimized) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF15261E))
+                                .border(1.dp, Color(0xFF224E3A), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Allowed",
+                                color = CleanBarGreenText,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF282014))
+                                .border(1.dp, Color(0xFF5E451A), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Allow",
+                                color = Color(0xFFFFB84D),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                },
+                onClick = {
+                    doVibrate(context)
+                    try {
+                        val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                        if (pm != null && pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                            triggerBottomToast("✓ Battery optimization already unrestricted")
+                        } else {
+                            try {
+                                val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                val fallbackIntent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(fallbackIntent)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        triggerBottomToast("Could not open battery settings")
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Restore All to System Default Card
+            MinimalCard(
+                icon = Icons.Default.Restore,
+                iconBg = Color(0xFF261818),
+                iconTint = Color(0xFFFF7B7B),
+                title = "Restore All to System Default",
+                subtitle = "Reset everything before uninstalling",
+                trailingContent = {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = CleanBarTextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                onClick = {
+                    doVibrate(context)
+                    showRestoreConfirmDialog = true
+                }
+            )
 
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -541,23 +935,26 @@ fun AboutScreen(
                     .clip(RoundedCornerShape(24.dp))
                     .background(Color(0xFF252525))
                     .border(1.dp, Color(0xFF3E3E3E), RoundedCornerShape(24.dp))
-                    .padding(horizontal = 16.dp, vertical = 9.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.widthIn(max = 330.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
                         tint = CleanBarGreenText,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = bottomToastMessage ?: "",
                         color = CleanBarTextPrimary,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
             }
@@ -586,6 +983,7 @@ private fun MinimalCard(
     iconTint: Color = Color.Unspecified,
     iconBg: Color,
     title: String,
+    subtitle: String? = null,
     trailingContent: @Composable () -> Unit,
     onClick: () -> Unit
 ) {
@@ -637,12 +1035,21 @@ private fun MinimalCard(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Text(
-                    text = title,
-                    color = CleanBarTextPrimary,
-                    fontSize = 13.5.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Column {
+                    Text(
+                        text = title,
+                        color = CleanBarTextPrimary,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            color = CleanBarTextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))

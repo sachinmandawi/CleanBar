@@ -10,10 +10,13 @@ import {
   Bug,
   Share2,
   ExternalLink,
-  User,
   RefreshCw,
   Download,
-  Code
+  Shield,
+  RotateCcw,
+  ChevronRight,
+  Zap,
+  Terminal
 } from 'lucide-react';
 
 function UpiLogo({ className = "w-5 h-5" }) {
@@ -46,18 +49,28 @@ const GITHUB_REPO_URL = "https://github.com/sachinmandawi/CleanBar";
 const GITHUB_ISSUES_URL = "https://github.com/sachinmandawi/CleanBar/issues";
 const UPI_ID = "darkcaptain@ybl";
 const BINANCE_UID = "1138545342";
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('main'); // 'main' | 'about'
   const [isHidden, setIsHidden] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [isPersistentMode, setIsPersistentMode] = useState(() => {
+    return localStorage.getItem('cleanbar_persistent') === 'true';
+  });
+  const [isBatteryOptimized, setIsBatteryOptimized] = useState(() => {
+    return localStorage.getItem('cleanbar_battery_exempt') === 'true';
+  });
+  const [isShizukuGranted, setIsShizukuGranted] = useState(() => {
+    return localStorage.getItem('cleanbar_shizuku_granted') === 'true';
+  });
 
   // Update Checker State
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
-  // Floating Bottom Toast Notification (Neeche me Toast)
+  // Floating Bottom Toast Notification
   const [bottomToast, setBottomToast] = useState(null);
 
   const showToast = (message) => {
@@ -89,7 +102,7 @@ export default function App() {
       setShowUpdateModal(false);
       return;
     }
-    if (window.location.hash === '#about') {
+    if (window.location.hash) {
       window.history.back();
     } else {
       setCurrentPage('main');
@@ -97,11 +110,33 @@ export default function App() {
   };
 
   const toggleHide = () => {
-    setIsHidden(!isHidden);
+    const nextState = !isHidden;
+    setIsHidden(nextState);
+    showToast(nextState ? '✓ Status bar hidden' : '✓ Status bar visible');
   };
 
-  const handleCopyEmail = (e) => {
-    e?.stopPropagation();
+  const handleTogglePersistent = () => {
+    const next = !isPersistentMode;
+    setIsPersistentMode(next);
+    localStorage.setItem('cleanbar_persistent', String(next));
+    showToast(next ? 'Auto-Reapply Enabled' : 'Auto-Reapply Disabled');
+  };
+
+  const handleToggleShizuku = () => {
+    const next = !isShizukuGranted;
+    setIsShizukuGranted(next);
+    localStorage.setItem('cleanbar_shizuku_granted', String(next));
+    showToast(next ? '✓ Shizuku Permission: Allowed' : 'Shizuku Permission Revoked');
+  };
+
+  const handleToggleBattery = () => {
+    const next = !isBatteryOptimized;
+    setIsBatteryOptimized(next);
+    localStorage.setItem('cleanbar_battery_exempt', String(next));
+    showToast(next ? '✓ Battery optimization unrestricted' : 'Battery optimization restored');
+  };
+
+  const handleCopyEmail = () => {
     navigator.clipboard.writeText(DEVELOPER_EMAIL);
     showToast(`✓ Copied: ${DEVELOPER_EMAIL}`);
   };
@@ -123,9 +158,7 @@ export default function App() {
           title: 'CleanBar',
           url: GITHUB_REPO_URL,
         });
-      } catch (err) {
-        // cancelled
-      }
+      } catch (err) {}
     } else {
       navigator.clipboard.writeText(GITHUB_REPO_URL);
       showToast('✓ Link copied');
@@ -177,13 +210,16 @@ export default function App() {
     }
   };
 
+  // =========================================================================
+  // PAGE 2: ABOUT SCREEN
+  // =========================================================================
   if (currentPage === 'about') {
     return (
       <div className="min-h-screen bg-[#191919] text-[#EBEBEB] flex flex-col items-center justify-start p-5 sm:p-7 font-sans select-none max-w-md mx-auto relative pb-20">
         
         {/* Floating Bottom Toast Notification */}
         {bottomToast && (
-          <div className="fixed bottom-7 z-50 bg-[#252525] border border-[#3E3E3E] text-[#EBEBEB] text-xs font-medium px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="fixed bottom-7 z-50 max-w-[340px] bg-[#252525] border border-[#3E3E3E] text-[#EBEBEB] text-xs font-medium px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
             <CheckCircle2 className="w-4 h-4 text-[#4DAB9A]" />
             <span>{bottomToast}</span>
           </div>
@@ -193,7 +229,7 @@ export default function App() {
         {showUpdateModal && updateResult && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-[#202020] border border-[#2F2F2F] rounded-3xl p-6 w-full max-w-xs flex flex-col items-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-              <div className="w-12 h-12 rounded-full bg-[#1E2F3A] border border-[#2B527E] flex items-center justify-center text-[#529CCA] mb-3">
+              <div className="w-12 h-12 rounded-full bg-[#1A2330] border border-[#2B4C7E] flex items-center justify-center text-[#529CCA] mb-3">
                 <Download className="w-6 h-6" />
               </div>
               <h3 className="font-bold text-base text-[#EBEBEB] mb-1">Update Available 🚀</h3>
@@ -221,8 +257,48 @@ export default function App() {
           </div>
         )}
 
+        {/* Restore Confirmation Modal */}
+        {showRestoreModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[#202020] border border-[#2F2F2F] rounded-3xl p-6 w-full max-w-xs flex flex-col items-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-12 h-12 rounded-full bg-[#2A1818] border border-[#6B2D2D] flex items-center justify-center text-[#FF8585] mb-3">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-base text-[#EBEBEB] mb-1">Restore to Default?</h3>
+              <p className="text-xs text-[#9B9A97] text-center mb-4 leading-relaxed">
+                This will restore all status bar icons, disable flags, and clear all settings. Recommended before uninstalling CleanBar.
+              </p>
+
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={() => setShowRestoreModal(false)}
+                  className="flex-1 bg-[#191919] border border-[#2F2F2F] hover:border-[#3D3D3D] text-[#9B9A97] text-xs font-medium py-2.5 rounded-xl cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRestoreModal(false);
+                    setIsHidden(false);
+                    setIsPersistentMode(false);
+                    setIsBatteryOptimized(false);
+                    setIsShizukuGranted(false);
+                    localStorage.removeItem('cleanbar_persistent');
+                    localStorage.removeItem('cleanbar_battery_exempt');
+                    localStorage.removeItem('cleanbar_shizuku_granted');
+                    showToast('✓ Status bar fully restored to default');
+                  }}
+                  className="flex-1 bg-[#8B2525] hover:bg-[#A82E2E] text-white text-xs font-bold py-2.5 rounded-xl flex items-center justify-center cursor-pointer transition-all"
+                >
+                  Restore
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Top Header */}
-        <div className="w-full flex items-center justify-between pt-4 pb-3">
+        <div className="w-full flex items-center justify-start pt-4 pb-3">
           <div className="flex items-center gap-3">
             <button
               onClick={navigateToMain}
@@ -233,167 +309,219 @@ export default function App() {
             </button>
             <h2 className="font-semibold text-base text-[#EBEBEB]">About</h2>
           </div>
-          <div className="px-2.5 py-0.5 rounded-full bg-[#15261E] border border-[#224E3A] text-[11px] font-medium text-[#4DAB9A]">
-            v{APP_VERSION}
-          </div>
         </div>
 
-        {/* Developer Card (Minimal) */}
-        <div className="w-full mt-3">
-          <div className="w-full bg-[#202020] border border-[#2A2A2A] rounded-2xl p-3 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-full bg-[#182330] border border-[#2B4C7E] flex items-center justify-center text-[#529CCA] shrink-0">
-              <Code className="w-5 h-5" />
+        {/* Settings Section */}
+        <div className="w-full mt-4">
+          <div className="text-[11px] font-semibold text-[#787774] uppercase px-1 mb-2 tracking-wider">
+            Settings
+          </div>
+          <div className="flex flex-col gap-2">
+            {/* Shizuku Permission Card */}
+            <div
+              onClick={handleToggleShizuku}
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  isShizukuGranted ? 'bg-[#15261E] text-[#4DAB9A]' : 'bg-[#1E2330] text-[#6CA8E8]'
+                }`}>
+                  <Terminal className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-semibold text-xs text-[#EBEBEB]">Shizuku Permission</div>
+                  <div className="text-[11px] text-[#787774]">
+                    {isShizukuGranted ? 'Authorized • Status bar control active' : 'Service Running • Tap to allow popup'}
+                  </div>
+                </div>
+              </div>
+              <div className={`w-10 h-6 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
+                isShizukuGranted ? 'bg-[#4DAB9A]' : 'bg-[#2B2B2B] border border-[#3E3E3E]'
+              }`}>
+                <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                  isShizukuGranted ? 'translate-x-4 shadow-sm' : 'translate-x-0 bg-[#787774]'
+                }`} />
+              </div>
             </div>
-            <div>
-              <div className="font-medium text-sm text-[#EBEBEB]">Sachin Mandawi</div>
-              <div className="text-xs text-[#787774]">Developer</div>
+
+            {/* Auto-Reapply on Unlock Card */}
+            <div
+              onClick={handleTogglePersistent}
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] text-[#787774] flex items-center justify-center shrink-0">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-semibold text-xs text-[#EBEBEB]">Auto-Reapply on Unlock</div>
+                  <div className="text-[11px] text-[#787774]">Keeps hidden across screen locks</div>
+                </div>
+              </div>
+              <div className={`w-10 h-6 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
+                isPersistentMode ? 'bg-[#529CCA]' : 'bg-[#2B2B2B] border border-[#3E3E3E]'
+              }`}>
+                <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                  isPersistentMode ? 'translate-x-4 shadow-sm' : 'translate-x-0 bg-[#787774]'
+                }`} />
+              </div>
+            </div>
+
+            {/* Ignore Battery Optimization Card */}
+            <div
+              onClick={handleToggleBattery}
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  isBatteryOptimized ? 'bg-[#15261E] text-[#4DAB9A]' : 'bg-[#282014] text-[#FFB84D]'
+                }`}>
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-semibold text-xs text-[#EBEBEB]">Ignore Battery Optimization</div>
+                  <div className="text-[11px] text-[#787774]">Prevents iQOO, Vivo & Xiaomi from killing app</div>
+                </div>
+              </div>
+              <div className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${
+                isBatteryOptimized
+                  ? 'bg-[#15261E] border-[#224E3A] text-[#4DAB9A]'
+                  : 'bg-[#282014] border-[#5E451A] text-[#FFB84D]'
+              }`}>
+                {isBatteryOptimized ? 'Allowed' : 'Allow'}
+              </div>
+            </div>
+
+            {/* Restore All to System Default Card */}
+            <div
+              onClick={() => setShowRestoreModal(true)}
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#2A1818] text-[#FF8585] flex items-center justify-center shrink-0">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-semibold text-xs text-[#EBEBEB]">Restore All to System Default</div>
+                  <div className="text-[11px] text-[#787774]">Reset everything before uninstalling</div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#787774]" />
             </div>
           </div>
         </div>
 
         {/* Support Section */}
-        <div className="w-full mt-5">
-          <div className="text-[11px] font-semibold text-[#787774] uppercase px-1 mb-1.5 tracking-wider">
+        <div className="w-full mt-4">
+          <div className="text-[11px] font-semibold text-[#787774] uppercase px-1 mb-2 tracking-wider">
             Support
           </div>
           <div className="flex flex-col gap-2">
-            
-            {/* UPI */}
             <div
               onClick={handleCopyUpi}
-              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#19251E] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#142318] flex items-center justify-center shrink-0">
                   <UpiLogo className="w-4 h-4" />
                 </div>
-                <span className="font-medium text-sm text-[#EBEBEB]">UPI • {UPI_ID}</span>
+                <div className="font-semibold text-xs text-[#EBEBEB]">UPI • {UPI_ID}</div>
               </div>
-              <div className="text-[#787774] hover:text-[#EBEBEB] p-1">
-                <Copy className="w-4 h-4" />
-              </div>
+              <Copy className="w-4 h-4 text-[#787774]" />
             </div>
 
-            {/* Binance */}
             <div
               onClick={handleCopyBinance}
-              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#292416] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#262010] flex items-center justify-center shrink-0">
                   <BinanceLogo className="w-4 h-4" />
                 </div>
-                <span className="font-medium text-sm text-[#EBEBEB]">Binance • {BINANCE_UID}</span>
+                <div className="font-semibold text-xs text-[#EBEBEB]">Binance • {BINANCE_UID}</div>
               </div>
-              <div className="text-[#787774] hover:text-[#EBEBEB] p-1">
-                <Copy className="w-4 h-4" />
-              </div>
+              <Copy className="w-4 h-4 text-[#787774]" />
             </div>
-
           </div>
         </div>
 
-        {/* Links & Updates */}
-        <div className="w-full mt-5">
-          <div className="text-[11px] font-semibold text-[#787774] uppercase px-1 mb-1.5 tracking-wider">
+        {/* Links Section */}
+        <div className="w-full mt-4">
+          <div className="text-[11px] font-semibold text-[#787774] uppercase px-1 mb-2 tracking-wider">
             Links
           </div>
           <div className="flex flex-col gap-2">
-            
-            {/* Check Updates */}
-            <button
+            <div
               onClick={handleCheckUpdate}
-              disabled={isCheckingUpdate}
-              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#18222E] flex items-center justify-center text-[#529CCA] shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#1A2330] text-[#529CCA] flex items-center justify-center shrink-0">
                   <RefreshCw className={`w-4 h-4 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
                 </div>
-                <span className="font-medium text-sm text-[#EBEBEB]">Check for Updates</span>
+                <div className="font-semibold text-xs text-[#EBEBEB]">Check for Updates</div>
               </div>
-              <span className="text-xs text-[#787774] mr-1">v{APP_VERSION}</span>
-            </button>
-
-            {/* Gmail - Copy on left of Launch icon */}
-            <div className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] rounded-2xl p-3 flex items-center justify-between transition-all">
-              <div
-                onClick={() => {
-                  window.location.href = `mailto:${DEVELOPER_EMAIL}?subject=%5BCleanBar%5D%20Feedback`;
-                }}
-                className="flex items-center gap-3 flex-1 cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#261919] flex items-center justify-center text-[#FF7369] shrink-0">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <span className="font-medium text-sm text-[#EBEBEB]">Gmail</span>
-              </div>
-
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleCopyEmail}
-                  className="w-7 h-7 rounded flex items-center justify-center text-[#787774] hover:text-[#EBEBEB] hover:bg-[#2A2A2A] active:scale-95 transition-all cursor-pointer"
-                  title="Copy Email"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-                <a
-                  href={`mailto:${DEVELOPER_EMAIL}?subject=%5BCleanBar%5D%20Feedback`}
-                  className="w-7 h-7 rounded flex items-center justify-center text-[#787774] hover:text-[#EBEBEB] hover:bg-[#2A2A2A] active:scale-95 transition-all cursor-pointer"
-                  title="Open Gmail"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
+              <span className="text-xs text-[#787774]">v{APP_VERSION}</span>
             </div>
 
-            {/* GitHub */}
             <a
               href={GITHUB_REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#17241F] flex items-center justify-center text-[#4DAB9A] shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] text-[#EBEBEB] flex items-center justify-center shrink-0">
                   <GithubIcon className="w-4 h-4" />
                 </div>
-                <span className="font-medium text-sm text-[#EBEBEB]">GitHub</span>
+                <div className="font-semibold text-xs text-[#EBEBEB]">GitHub Repository</div>
               </div>
-              <ExternalLink className="w-4 h-4 text-[#787774] mr-1" />
+              <ExternalLink className="w-4 h-4 text-[#787774]" />
             </a>
 
-            {/* Report Bug */}
             <a
               href={GITHUB_ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#261F17] flex items-center justify-center text-[#FFB86C] shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#2A1818] text-[#FF8585] flex items-center justify-center shrink-0">
                   <Bug className="w-4 h-4" />
                 </div>
-                <span className="font-medium text-sm text-[#EBEBEB]">Report Bug</span>
+                <div className="font-semibold text-xs text-[#EBEBEB]">Report an Issue</div>
               </div>
-              <ExternalLink className="w-4 h-4 text-[#787774] mr-1" />
+              <ExternalLink className="w-4 h-4 text-[#787774]" />
             </a>
 
-            {/* Share */}
-            <button
-              onClick={handleShare}
-              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] rounded-2xl p-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+            <div
+              onClick={handleCopyEmail}
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#231926] flex items-center justify-center text-[#C678DD] shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] text-[#787774] flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-semibold text-xs text-[#EBEBEB]">Contact Developer</div>
+                  <div className="text-[11px] text-[#787774]">{DEVELOPER_EMAIL}</div>
+                </div>
+              </div>
+              <Copy className="w-4 h-4 text-[#787774]" />
+            </div>
+
+            <div
+              onClick={handleShare}
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] text-[#787774] flex items-center justify-center shrink-0">
                   <Share2 className="w-4 h-4" />
                 </div>
-                <span className="font-medium text-sm text-[#EBEBEB]">Share App</span>
+                <div className="font-semibold text-xs text-[#EBEBEB]">Share CleanBar</div>
               </div>
-              <Share2 className="w-4 h-4 text-[#787774] mr-1" />
-            </button>
-
+              <ExternalLink className="w-4 h-4 text-[#787774]" />
+            </div>
           </div>
         </div>
 
@@ -401,31 +529,24 @@ export default function App() {
     );
   }
 
+  // =========================================================================
+  // PAGE 1: MAIN HOME SCREEN (Pure Minimalist 1-Click Toggle)
+  // =========================================================================
   return (
     <div className="min-h-screen bg-[#191919] text-[#EBEBEB] flex flex-col items-center justify-between p-6 sm:p-10 font-sans select-none max-w-md mx-auto">
       
-      {/* Top Header Row with Shizuku Status Pill & 3-Dot Overflow Menu */}
-      <div className="w-full flex items-center justify-between pt-6">
-        <div className="w-9" /> {/* Spacer for centering the pill */}
-
-        <div className="flex items-center gap-2 bg-[#202020] border border-[#2F2F2F] px-3.5 py-1.5 rounded-full text-xs text-[#9B9A97] font-medium cursor-pointer hover:bg-[#252525] transition-colors">
-          <span className="w-2 h-2 rounded-full bg-[#4DAB9A]" />
-          <span className="text-[#EBEBEB]">Shizuku Ready</span>
-        </div>
-
-        {/* 3-Dot Menu Button */}
+      {/* Top Header: Pure 3-Dot Button */}
+      <div className="w-full flex items-center justify-end pt-4">
         <button
           onClick={navigateToAbout}
-          className="w-9 h-9 rounded-full bg-[#202020] border border-[#2F2F2F] flex items-center justify-center text-[#EBEBEB] hover:bg-[#2A2A2A] active:scale-95 transition-all cursor-pointer"
-          title="About Developer & App"
+          className="w-10 h-10 rounded-full bg-[#202020] border border-[#2F2F2F] flex items-center justify-center text-[#EBEBEB] hover:bg-[#2A2A2A] active:scale-95 transition-all cursor-pointer"
+          title="Settings & Modes"
         >
           <MoreVertical className="w-4 h-4" />
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* CENTER: FLAT 1-CLICK MASTER BUTTON */}
-      {/* ========================================================================= */}
+      {/* Center 1-Click Master Button */}
       <div className="flex flex-col items-center space-y-6 my-auto">
         <button
           onClick={toggleHide}
@@ -436,31 +557,40 @@ export default function App() {
           }`}
         >
           {isHidden ? (
-            <EyeOff className="w-14 h-14 mb-2" />
+            <EyeOff className="w-14 h-14 mb-1" />
           ) : (
-            <Eye className="w-14 h-14 mb-2" />
+            <Eye className="w-14 h-14 mb-1" />
           )}
           <span className="text-xl font-bold tracking-wider">
             {isHidden ? 'HIDDEN' : 'VISIBLE'}
+          </span>
+          <span className={`text-[10px] font-semibold mt-1 tracking-wider ${
+            isHidden ? 'text-[#4DAB9A]' : 'text-[#787774]'
+          }`}>
+            {isHidden ? 'TAP TO SHOW' : 'TAP TO HIDE'}
           </span>
         </button>
 
         <div className="text-center space-y-1">
           <div className={`text-sm font-medium ${isHidden ? 'text-[#FF8585]' : 'text-[#6CA8E8]'}`}>
-            {isHidden ? 'Status Bar is 100% HIDDEN' : 'Status Bar is VISIBLE'}
+            {isHidden ? 'Status Bar is HIDDEN' : 'Status Bar is VISIBLE'}
           </div>
           <p className="text-xs text-[#787774]">
-            {isHidden
-              ? 'Tap button to make Status Bar VISIBLE'
-              : 'Tap button to HIDE Status Bar & Clock'}
+            {isHidden ? 'Tap button to make Status Bar VISIBLE' : 'Tap button to HIDE Status Bar'}
           </p>
         </div>
       </div>
 
-      {/* Bottom info note */}
-      <div className="pb-4 text-center">
-        <span className="text-[11px] text-[#787774]">CleanBar v{APP_VERSION}</span>
-      </div>
+      {/* Floating Bottom Toast Notification */}
+      {bottomToast && (
+        <div className="fixed bottom-7 z-50 max-w-[340px] bg-[#252525] border border-[#3E3E3E] text-[#EBEBEB] text-xs font-medium px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-[#4DAB9A]" />
+          <span>{bottomToast}</span>
+        </div>
+      )}
+
+      {/* Bottom Spacer */}
+      <div className="h-6" />
 
     </div>
   );

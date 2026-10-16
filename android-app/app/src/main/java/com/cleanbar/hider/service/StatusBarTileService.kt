@@ -33,7 +33,9 @@ class StatusBarTileService : TileService() {
         // Guard: prevent double-tap race condition
         if (isProcessing.getAndSet(true)) return
 
-        if (!ShizukuManager.hasPermission()) {
+        val hasPermission = ShizukuManager.hasPermission()
+
+        if (!hasPermission) {
             val tile = qsTile ?: run { isProcessing.set(false); return }
             tile.state = Tile.STATE_UNAVAILABLE
             setTileSubtitle(tile, "Shizuku Required")
@@ -48,14 +50,14 @@ class StatusBarTileService : TileService() {
         scope.launch {
             try {
                 if (isCurrentlyActive) {
-                    ImmersiveController.resetToDefault()
+                    ImmersiveController.resetToDefault(this@StatusBarTileService)
                     com.cleanbar.hider.util.PreferencesHelper.setTargetHidden(this@StatusBarTileService, false)
                     KeepAliveService.stop(this@StatusBarTileService)
                     tile.state = Tile.STATE_INACTIVE
                     tile.label = "CleanBar"
                     setTileSubtitle(tile, "Visible")
                 } else {
-                    ImmersiveController.hideStatusBarGlobally()
+                    ImmersiveController.hideStatusBar(this@StatusBarTileService)
                     com.cleanbar.hider.util.PreferencesHelper.setTargetHidden(this@StatusBarTileService, true)
                     if (com.cleanbar.hider.util.PreferencesHelper.isPersistentModeEnabled(this@StatusBarTileService)) {
                         KeepAliveService.start(this@StatusBarTileService)
@@ -76,10 +78,12 @@ class StatusBarTileService : TileService() {
 
     private fun updateTileState() {
         val tile = qsTile ?: return
-        if (!ShizukuManager.hasPermission()) {
+        val hasPermission = ShizukuManager.hasPermission()
+
+        if (!hasPermission) {
             tile.state = Tile.STATE_UNAVAILABLE
             tile.label = "CleanBar"
-            setTileSubtitle(tile, "Setup Needed")
+            setTileSubtitle(tile, "Shizuku Needed")
             tile.icon = Icon.createWithResource(this, R.drawable.ic_status_bar_tile)
             tile.updateTile()
             return
@@ -87,7 +91,7 @@ class StatusBarTileService : TileService() {
 
         scope.launch {
             try {
-                val isHidden = ImmersiveController.isCurrentlyHidden()
+                val isHidden = ImmersiveController.isCurrentlyHidden(this@StatusBarTileService)
                 tile.state = if (isHidden) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
                 tile.label = "CleanBar"
                 setTileSubtitle(tile, if (isHidden) "Hidden" else "Visible")

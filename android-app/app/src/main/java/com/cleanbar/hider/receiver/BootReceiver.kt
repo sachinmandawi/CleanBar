@@ -22,7 +22,7 @@ class BootReceiver : BroadcastReceiver() {
                 if (ShizukuManager.hasPermission()) {
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            ImmersiveController.hideStatusBarGlobally()
+                            ImmersiveController.hideStatusBar(context)
                         } catch (e: Throwable) {
                             e.printStackTrace()
                         }

@@ -19,3 +19,5 @@ preview/.vite/
 Thumbs.db
 *.log
 *.tmp
+
+*.idsig

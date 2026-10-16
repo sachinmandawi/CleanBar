@@ -8,7 +8,7 @@ import java.net.URL
 
 object UpdateChecker {
 
-    const val CURRENT_VERSION = "1.2.0"
+    const val CURRENT_VERSION = "1.3.0"
     private const val GITHUB_API_URL = "https://api.github.com/repos/sachinmandawi/CleanBar/releases/latest"
 
     data class UpdateResult(

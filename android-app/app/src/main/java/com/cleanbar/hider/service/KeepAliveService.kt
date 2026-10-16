@@ -47,6 +47,7 @@ class KeepAliveService : Service() {
         }
 
         fun stop(context: Context) {
+            PreferencesHelper.setTargetHidden(context, false)
             val intent = Intent(context, KeepAliveService::class.java)
             try {
                 context.stopService(intent)
@@ -58,6 +59,7 @@ class KeepAliveService : Service() {
 
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+    private var reapplyJob: kotlinx.coroutines.Job? = null
     private var isReceiverRegistered = false
 
     private val screenReceiver = object : BroadcastReceiver() {
@@ -86,6 +88,7 @@ class KeepAliveService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        reapplyJob?.cancel()
         unregisterScreenReceiver()
         serviceScope.cancel()
     }
@@ -176,32 +179,43 @@ class KeepAliveService : Service() {
         if (!PreferencesHelper.isTargetHidden(this)) return
         if (!ShizukuManager.hasPermission()) return
 
-        serviceScope.launch(Dispatchers.IO) {
+        reapplyJob?.cancel()
+        reapplyJob = serviceScope.launch(Dispatchers.IO) {
             try {
-                // Pass 1: Immediate reapply
-                ImmersiveController.hideStatusBarGlobally()
+                if (!PreferencesHelper.isTargetHidden(this@KeepAliveService)) return@launch
+                // Pass 1: Immediate reapply (0ms)
+                ImmersiveController.hideStatusBar(this@KeepAliveService)
 
-                // Pass 2: Delay 350ms to override aggressive OEM keyguard dismiss cleanup (Vivo OriginOS / Xiaomi HyperOS)
-                delay(350)
-                ImmersiveController.hideStatusBarGlobally()
-            } catch (e: Throwable) {
-                e.printStackTrace()
-            }
+                // Pass 2: 300ms (Mid-keyguard unlock animation)
+                delay(300)
+                if (!PreferencesHelper.isTargetHidden(this@KeepAliveService)) return@launch
+                ImmersiveController.hideStatusBar(this@KeepAliveService)
+
+                // Pass 3: 750ms (Post-keyguard dismiss on Vivo OriginOS / Funtouch / HyperOS)
+                delay(450)
+                if (!PreferencesHelper.isTargetHidden(this@KeepAliveService)) return@launch
+                ImmersiveController.hideStatusBar(this@KeepAliveService)
+
+                // Pass 4: 1400ms (Final OEM transition cleanup for 120Hz/144Hz displays like iQOO Neo)
+                delay(650)
+                if (!PreferencesHelper.isTargetHidden(this@KeepAliveService)) return@launch
+                ImmersiveController.hideStatusBar(this@KeepAliveService)
+            } catch (ignored: Throwable) {}
         }
     }
 
     private fun startPeriodicWatcher() {
         serviceScope.launch(Dispatchers.IO) {
             while (isActive) {
-                // Check every 10 minutes to fix silent OEM timeout resets (e.g. OriginOS 20-min reset)
-                delay(10 * 60 * 1000L)
+                // Check every 3 minutes to fix silent OEM timeout resets (e.g. OriginOS / FuntouchOS)
+                delay(3 * 60 * 1000L)
                 if (PreferencesHelper.isPersistentModeEnabled(this@KeepAliveService) &&
                     PreferencesHelper.isTargetHidden(this@KeepAliveService) &&
                     ShizukuManager.hasPermission()
                 ) {
-                    val currentlyHidden = ImmersiveController.isCurrentlyHidden()
+                    val currentlyHidden = ImmersiveController.isCurrentlyHidden(this@KeepAliveService)
                     if (!currentlyHidden) {
-                        ImmersiveController.hideStatusBarGlobally()
+                        ImmersiveController.hideStatusBar(this@KeepAliveService)
                     }
                 }
             }
