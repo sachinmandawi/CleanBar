@@ -90,11 +90,8 @@ settings put global policy_control null
 
 ## 🚀 What's New in v1.4.0
 
-- **Diagnostic & Error Logs**: Added in-app log viewer with single-tap Copy, Share, and Clear logs to diagnose device-specific behavior.
-- **Notification Shade Swipe Auto-Reapply**: Registered `ACTION_CLOSE_SYSTEM_DIALOGS` so status bar stays hidden when opening and closing notification center.
-- **Android 15 Edge-to-Edge & Flicker Fix**: Eliminated edge white flash/scrim with dark window decor and contrast enforcement suppression on HyperOS / Android 15.
-- **Tactile Micro-Animations**: Added animated scale feedback on 3-dot and back navigation buttons with fluid parallax screen transitions.
-- **Vector Branding**: Replaced notification and tile icons with authentic CleanBar vector logo.
+• **Added in-app Diagnostic Logs** with 1-tap copy & clear to easily troubleshoot device-specific behavior.  
+• **Fixed Android 15 screen flicker** & smoothed notification shade swipe re-apply.
 
 ---
 
