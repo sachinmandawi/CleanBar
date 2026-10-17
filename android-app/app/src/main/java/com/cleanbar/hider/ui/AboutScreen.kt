@@ -7,11 +7,15 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -46,6 +50,7 @@ import com.cleanbar.hider.service.KeepAliveService
 import com.cleanbar.hider.shizuku.ImmersiveController
 import com.cleanbar.hider.shizuku.ShizukuManager
 import com.cleanbar.hider.ui.theme.*
+import com.cleanbar.hider.util.AppLogger
 import com.cleanbar.hider.util.PreferencesHelper
 import com.cleanbar.hider.util.UpdateChecker
 import kotlinx.coroutines.delay
@@ -104,6 +109,17 @@ fun AboutScreen(
     }
 
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+    var showLogsDialog by remember { mutableStateOf(false) }
+    var logsReportText by remember { mutableStateOf("") }
+    var isLoadingLogs by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showLogsDialog) {
+        if (showLogsDialog) {
+            isLoadingLogs = true
+            logsReportText = AppLogger.getFormattedDiagnosticReport(context)
+            isLoadingLogs = false
+        }
+    }
 
     // Bottom Toast State
     var bottomToastMessage by remember { mutableStateOf<String?>(null) }
@@ -124,6 +140,8 @@ fun AboutScreen(
             showUpdateDialog = false
         } else if (showRestoreConfirmDialog) {
             showRestoreConfirmDialog = false
+        } else if (showLogsDialog) {
+            showLogsDialog = false
         } else {
             doVibrate(context)
             onBack()
@@ -315,6 +333,207 @@ fun AboutScreen(
         }
     }
 
+    // Diagnostic Logs Dialog
+    if (showLogsDialog) {
+        Dialog(onDismissRequest = { showLogsDialog = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(CleanBarDarkSurface)
+                    .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(24.dp))
+                    .padding(20.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF1E2330)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.BugReport,
+                                    contentDescription = null,
+                                    tint = CleanBarBlueText,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Diagnostic Logs",
+                                color = CleanBarTextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showLogsDialog = false },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = CleanBarTextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    if (isLoadingLogs) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = CleanBarBlueText,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF141414))
+                                .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                text = logsReportText.ifEmpty { "No diagnostic logs available yet." },
+                                color = Color(0xFFD4D4D4),
+                                fontSize = 11.sp,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Clear Button
+                        OutlinedButton(
+                            onClick = {
+                                doVibrate(context)
+                                AppLogger.clearLogs()
+                                coroutineScope.launch {
+                                    logsReportText = AppLogger.getFormattedDiagnosticReport(context)
+                                }
+                                triggerBottomToast("✓ Event logs cleared")
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFEF4444)
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33EF4444)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Clear",
+                                fontSize = 12.sp,
+                                color = Color(0xFFEF4444),
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                        }
+
+                        // Copy Button
+                        Button(
+                            onClick = {
+                                doVibrate(context)
+                                clipboardManager.setText(AnnotatedString(logsReportText))
+                                triggerBottomToast("✓ Diagnostic logs copied to clipboard!")
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CleanBarBlueText,
+                                contentColor = Color(0xFF121820)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Copy Logs",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+
+                        // Share Button
+                        OutlinedButton(
+                            onClick = {
+                                doVibrate(context)
+                                try {
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, "CleanBar Diagnostic Report")
+                                        putExtra(Intent.EXTRA_TEXT, logsReportText)
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Diagnostic Logs"))
+                                } catch (e: Throwable) {
+                                    triggerBottomToast("Could not open share menu")
+                                }
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = CleanBarTextPrimary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CleanBarDarkBorder),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Share",
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -337,14 +556,23 @@ fun AboutScreen(
                     .padding(bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val backInteraction = remember { MutableInteractionSource() }
+                val isBackPressed by backInteraction.collectIsPressedAsState()
+                val backScale by animateFloatAsState(
+                    targetValue = if (isBackPressed) 0.88f else 1f,
+                    animationSpec = tween(durationMillis = 150),
+                    label = "backScale"
+                )
+
                 Box(
                     modifier = Modifier
                         .size(38.dp)
+                        .scale(backScale)
                         .clip(CircleShape)
                         .background(CleanBarDarkSurface)
                         .border(1.dp, CleanBarDarkBorder, CircleShape)
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = backInteraction,
                             indication = null
                         ) {
                             doVibrate(context)
@@ -370,7 +598,48 @@ fun AboutScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(18.dp))
 
+            // App Brand Header Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(CleanBarDarkSurface)
+                    .border(1.dp, CleanBarDarkBorder, RoundedCornerShape(20.dp))
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher),
+                        contentDescription = "CleanBar Logo",
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                    )
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column {
+                        Text(
+                            text = "CleanBar",
+                            color = CleanBarTextPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Version ${UpdateChecker.CURRENT_VERSION} • Full Status Bar Hider",
+                            color = CleanBarTextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
 
             // ==========================================
             // Settings Section
@@ -681,6 +950,29 @@ fun AboutScreen(
                 onClick = {
                     doVibrate(context)
                     showRestoreConfirmDialog = true
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Diagnostic & Error Logs Card
+            MinimalCard(
+                icon = Icons.Default.BugReport,
+                iconBg = Color(0xFF1E2330),
+                iconTint = CleanBarBlueText,
+                title = "Diagnostic & Error Logs",
+                subtitle = "View, copy or clear diagnostic event logs",
+                trailingContent = {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = CleanBarTextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                onClick = {
+                    doVibrate(context)
+                    showLogsDialog = true
                 }
             )
 

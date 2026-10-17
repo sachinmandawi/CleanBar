@@ -37,16 +37,17 @@
 
 ---
 
-## ✨ Features (v1.3.0)
+## ✨ Features (v1.4.0)
 
 - ⚡ **1-Tap Master Toggle:** Instantly hide or restore all status bar elements with a single click.
 - 🚫 **Complete Icon & Clock Removal:** Disables system icons, clock, battery percentage, Wi-Fi, 5G, and notification icons seamlessly without root.
-- 🛡️ **Auto-Reapply on Unlock:** Keeps your status bar hidden seamlessly across screen locks and device wakeups.
+- 🛡️ **Auto-Reapply on Unlock & Shade Close:** Keeps your status bar hidden seamlessly across screen locks, device wakeups, and notification center swipes.
+- 📋 **In-App Diagnostic & Error Logs:** Monospace log viewer with 1-tap Copy, Share, and Clear to effortlessly report device-specific logs to the developer.
 - 🔒 **100% Reversible System Reset:** Dedicated 1-tap "Restore All to System Default" to safely reset all flags and configurations before uninstalling.
 - 🎛️ **Quick Settings Tile:** Add the CleanBar tile to your notification shade to toggle status bar visibility from anywhere.
-- 🖤 **Pure AMOLED Dark UI:** Pitch-black background crafted specifically for OLED screens to save battery and look gorgeous.
+- 🖤 **Zero-Flicker AMOLED Dark UI:** Pitch-black background with contrast enforcement suppression for Android 15 & HyperOS.
 - 🚀 **In-App Update Checker:** Check for the latest releases with 1-tap right from the About screen.
-- 📳 **Haptic Feedback:** Crisp physical vibration feedback on every button tap.
+- 📳 **Tactile Animated Feedback:** Crisp haptic vibration and micro-scale spring animations on every interactive control.
 - 🔒 **No Root Required:** Utilizes the privileged [Shizuku](https://shizuku.rikka.app/) Binder service via Wireless Debugging / ADB.
 - 🛡️ **Real-Time State Sync:** Automatically queries and synchronizes real device status on app launch and resume.
 
@@ -87,10 +88,13 @@ settings put global policy_control null
 
 ---
 
-## 🚀 What's New in v1.3.0
+## 🚀 What's New in v1.4.0
 
-- Added background running permission support to keep Auto-Reapply active seamlessly across screen locks.
-- Added 1-click 'Restore All to System Default' safety reset before uninstalling.
+- **Diagnostic & Error Logs**: Added in-app log viewer with single-tap Copy, Share, and Clear logs to diagnose device-specific behavior.
+- **Notification Shade Swipe Auto-Reapply**: Registered `ACTION_CLOSE_SYSTEM_DIALOGS` so status bar stays hidden when opening and closing notification center.
+- **Android 15 Edge-to-Edge & Flicker Fix**: Eliminated edge white flash/scrim with dark window decor and contrast enforcement suppression on HyperOS / Android 15.
+- **Tactile Micro-Animations**: Added animated scale feedback on 3-dot and back navigation buttons with fluid parallax screen transitions.
+- **Vector Branding**: Replaced notification and tile icons with authentic CleanBar vector logo.
 
 ---
 

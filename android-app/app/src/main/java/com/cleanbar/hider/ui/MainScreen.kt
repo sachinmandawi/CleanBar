@@ -7,11 +7,15 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -138,21 +142,30 @@ fun MainScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
 
-            // Top Bar: Pure 3-Dot Button on Top-Right (No clutter)
+            // Top Bar: Pure 3-Dot Button on Top-Right (Smooth Animated Press)
             Box(
                 modifier = Modifier
                     .padding(top = 16.dp)
                     .fillMaxWidth()
             ) {
+                val dotsInteraction = remember { MutableInteractionSource() }
+                val isDotsPressed by dotsInteraction.collectIsPressedAsState()
+                val dotsScale by animateFloatAsState(
+                    targetValue = if (isDotsPressed) 0.88f else 1f,
+                    animationSpec = tween(durationMillis = 150),
+                    label = "dotsScale"
+                )
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .size(38.dp)
+                        .scale(dotsScale)
                         .clip(CircleShape)
                         .background(CleanBarDarkSurface)
                         .border(1.dp, CleanBarDarkBorder, CircleShape)
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = dotsInteraction,
                             indication = null
                         ) {
                             vibrate()

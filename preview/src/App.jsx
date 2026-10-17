@@ -16,7 +16,9 @@ import {
   RotateCcw,
   ChevronRight,
   Zap,
-  Terminal
+  Terminal,
+  Trash2,
+  X
 } from 'lucide-react';
 
 function UpiLogo({ className = "w-5 h-5" }) {
@@ -49,7 +51,7 @@ const GITHUB_REPO_URL = "https://github.com/sachinmandawi/CleanBar";
 const GITHUB_ISSUES_URL = "https://github.com/sachinmandawi/CleanBar/issues";
 const UPI_ID = "darkcaptain@ybl";
 const BINANCE_UID = "1138545342";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('main'); // 'main' | 'about'
@@ -69,6 +71,37 @@ export default function App() {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateResult, setUpdateResult] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+  // Diagnostic Logs Modal State
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const sampleInitialLogs = `### CleanBar Diagnostic Report
+\`\`\`yaml
+App Version: 1.4.0 (5)
+Device Manufacturer: Xiaomi
+Device Model: 23124RN87I (air)
+Android Version: 15 (API 35)
+Build Fingerprint: Redmi/air_in/air:15/AP3A.240905.015.A2/OS2.0.208.0.VGQINXM:user/release-keys
+Shizuku Installed: true
+Shizuku Running: true
+Shizuku Permission: true
+Battery Optimization Exempt: true
+Notifications Enabled: true
+Target Status Bar Hidden: true
+Auto-Reapply on Unlock: true
+policy_control: immersive.status=*
+StatusBar mDisabled: mDisabled1=0x920000;     mDisabled2=0x0
+\`\`\`
+
+#### Recent Event Logs (Last 6):
+\`\`\`text
+[00:26:05] [INFO] [KeepAliveService] Service created, starting in foreground...
+[00:26:11] [INFO] [KeepAliveService] Broadcast received: android.intent.action.SCREEN_ON
+[00:26:25] [INFO] [KeepAliveService] Broadcast received: android.intent.action.USER_PRESENT
+[00:26:25] [INFO] [ImmersiveController] ✓ Status bar hidden successfully
+[00:26:39] [INFO] [KeepAliveService] Broadcast received: android.intent.action.CLOSE_SYSTEM_DIALOGS
+[00:26:40] [INFO] [ImmersiveController] ✓ Status bar hidden successfully
+\`\`\``;
+  const [logsText, setLogsText] = useState(sampleInitialLogs);
 
   // Floating Bottom Toast Notification
   const [bottomToast, setBottomToast] = useState(null);
@@ -297,6 +330,67 @@ export default function App() {
           </div>
         )}
 
+        {/* Diagnostic Logs Modal */}
+        {showLogsModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[#202020] border border-[#2F2F2F] rounded-3xl p-5 w-full max-w-sm flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[85vh]">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#1E2330] text-[#6CA8E8] flex items-center justify-center">
+                    <Bug className="w-4 h-4" />
+                  </div>
+                  <h3 className="font-bold text-sm text-[#EBEBEB]">Diagnostic Logs</h3>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setShowLogsModal(false)}
+                    className="w-7 h-7 rounded-lg hover:bg-[#2A2A2A] text-[#9B9A97] flex items-center justify-center cursor-pointer transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Logs Content */}
+              <div className="flex-1 overflow-y-auto bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 my-2 text-[10px] font-mono text-[#D4D4D4] whitespace-pre-wrap leading-relaxed max-h-[50vh]">
+                {logsText}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 mt-2 pt-1">
+                <button
+                  onClick={() => {
+                    setLogsText(`### CleanBar Diagnostic Report\n\`\`\`yaml\nApp Version: 1.4.0 (5)\nTarget Status Bar Hidden: true\n\`\`\`\n\n#### Recent Event Logs (Last 0):\n\`\`\`text\nNo events logged yet.\n\`\`\``);
+                    showToast('✓ Event logs cleared');
+                  }}
+                  className="flex-1 bg-transparent border border-red-500/30 hover:bg-red-500/10 text-red-400 text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText?.(logsText);
+                    showToast('✓ Diagnostic logs copied to clipboard!');
+                  }}
+                  className="flex-1 bg-[#529CCA] hover:bg-[#6CA8E8] text-black text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copy Logs
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="flex-1 bg-transparent border border-[#2F2F2F] hover:border-[#3D3D3D] text-[#EBEBEB] text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Top Header */}
         <div className="w-full flex items-center justify-start pt-4 pb-3">
           <div className="flex items-center gap-3">
@@ -308,6 +402,21 @@ export default function App() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h2 className="font-semibold text-base text-[#EBEBEB]">About</h2>
+          </div>
+        </div>
+
+        {/* CleanBar Brand Header Card */}
+        <div className="w-full mt-2 bg-[#202020] border border-[#2A2A2A] p-4 rounded-2xl flex items-center gap-3.5">
+          <img
+            src="/app_logo.png"
+            alt="CleanBar"
+            className="w-12 h-12 rounded-xl object-cover shrink-0"
+          />
+          <div>
+            <div className="font-bold text-sm text-[#EBEBEB]">CleanBar</div>
+            <div className="text-[11px] text-[#787774] mt-0.5">
+              Version {APP_VERSION} • Full Status Bar Hider
+            </div>
           </div>
         </div>
 
@@ -404,6 +513,23 @@ export default function App() {
                 <div>
                   <div className="font-semibold text-xs text-[#EBEBEB]">Restore All to System Default</div>
                   <div className="text-[11px] text-[#787774]">Reset everything before uninstalling</div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#787774]" />
+            </div>
+
+            {/* Diagnostic & Error Logs Card */}
+            <div
+              onClick={() => setShowLogsModal(true)}
+              className="w-full bg-[#202020] border border-[#2A2A2A] hover:border-[#383838] p-3 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#1E2330] text-[#6CA8E8] flex items-center justify-center shrink-0">
+                  <Bug className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-semibold text-xs text-[#EBEBEB]">Diagnostic & Error Logs</div>
+                  <div className="text-[11px] text-[#787774]">View, copy or clear diagnostic event logs</div>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-[#787774]" />

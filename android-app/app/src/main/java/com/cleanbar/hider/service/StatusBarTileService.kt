@@ -66,7 +66,7 @@ class StatusBarTileService : TileService() {
                     tile.label = "CleanBar"
                     setTileSubtitle(tile, "Hidden")
                 }
-                tile.icon = Icon.createWithResource(this@StatusBarTileService, R.drawable.ic_status_bar_tile)
+                tile.icon = Icon.createWithResource(this@StatusBarTileService, R.drawable.ic_cleanbar_logo_vector)
                 tile.updateTile()
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -84,7 +84,7 @@ class StatusBarTileService : TileService() {
             tile.state = Tile.STATE_UNAVAILABLE
             tile.label = "CleanBar"
             setTileSubtitle(tile, "Shizuku Needed")
-            tile.icon = Icon.createWithResource(this, R.drawable.ic_status_bar_tile)
+            tile.icon = Icon.createWithResource(this, R.drawable.ic_cleanbar_logo_vector)
             tile.updateTile()
             return
         }
@@ -95,7 +95,7 @@ class StatusBarTileService : TileService() {
                 tile.state = if (isHidden) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
                 tile.label = "CleanBar"
                 setTileSubtitle(tile, if (isHidden) "Hidden" else "Visible")
-                tile.icon = Icon.createWithResource(this@StatusBarTileService, R.drawable.ic_status_bar_tile)
+                tile.icon = Icon.createWithResource(this@StatusBarTileService, R.drawable.ic_cleanbar_logo_vector)
                 tile.updateTile()
             } catch (e: Throwable) {
                 e.printStackTrace()

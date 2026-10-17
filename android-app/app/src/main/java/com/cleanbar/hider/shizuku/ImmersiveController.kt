@@ -1,6 +1,7 @@
 package com.cleanbar.hider.shizuku
 
 import android.content.Context
+import com.cleanbar.hider.util.AppLogger
 import com.cleanbar.hider.util.PreferencesHelper
 
 object ImmersiveController {
@@ -10,13 +11,18 @@ object ImmersiveController {
      */
     suspend fun hideStatusBar(context: Context): Result<String> {
         if (!ShizukuManager.hasPermission()) {
+            AppLogger.w("ImmersiveController", "hideStatusBar called but Shizuku permission missing")
             return Result.failure(IllegalStateException("Shizuku permission not granted"))
         }
 
+        AppLogger.i("ImmersiveController", "Applying hide status bar sequence (none -> flags -> blacklist)")
         // Step 1: Exit any active demo mode
         ShizukuManager.executeCommand("am broadcast -a com.android.systemui.demo -e command exit")
 
-        // Step 2: Full Hide - Disable all system icons, clock, and notification icons
+        // Step 2: Reset to 'none' first so SystemUI invalidates cached bitmask (critical for OriginOS/Vivo/HyperOS)
+        ShizukuManager.executeCommand("cmd statusbar send-disable-flag none")
+
+        // Step 3: Full Hide - Disable all system icons, clock, and notification icons
         ShizukuManager.executeCommand("cmd statusbar send-disable-flag system-icons clock notification-icons")
         ShizukuManager.executeCommand("settings put global policy_control immersive.status=*")
         
@@ -25,6 +31,7 @@ object ImmersiveController {
         ShizukuManager.executeCommand("settings put system icon_blacklist \"$allSlots\"")
         ShizukuManager.executeCommand("settings put global icon_blacklist \"$allSlots\"")
 
+        AppLogger.i("ImmersiveController", "✓ Status bar hidden successfully")
         return Result.success("All status bar elements hidden")
     }
 
@@ -34,9 +41,11 @@ object ImmersiveController {
      */
     suspend fun resetToDefault(context: Context? = null): Result<String> {
         if (!ShizukuManager.hasPermission()) {
+            AppLogger.w("ImmersiveController", "resetToDefault called but Shizuku permission missing")
             return Result.failure(IllegalStateException("Shizuku permission not granted"))
         }
 
+        AppLogger.i("ImmersiveController", "Executing 100% factory restore sequence...")
         // 1. Cleanly delete policy_control first so WindowManager exits immersive mode
         ShizukuManager.executeCommand("settings put global policy_control \"\"")
         ShizukuManager.executeCommand("settings delete global policy_control")
@@ -56,6 +65,7 @@ object ImmersiveController {
         // 4. Exit demo mode
         ShizukuManager.executeCommand("am broadcast -a com.android.systemui.demo -e command exit")
 
+        AppLogger.i("ImmersiveController", "✓ Factory restore completed")
         return Result.success("Status bar restored to default")
     }
 

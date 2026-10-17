@@ -13,6 +13,7 @@ object ShizukuManager {
     private const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
 
     fun isShizukuInstalled(context: android.content.Context): Boolean {
+        if (isShizukuAvailable()) return true
         return try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                 context.packageManager.getPackageInfo(

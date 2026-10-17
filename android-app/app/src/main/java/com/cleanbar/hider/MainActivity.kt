@@ -3,12 +3,20 @@ package com.cleanbar.hider
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import com.cleanbar.hider.shizuku.ShizukuManager
 import com.cleanbar.hider.ui.AboutScreen
 import com.cleanbar.hider.ui.MainScreen
+import com.cleanbar.hider.ui.theme.CleanBarDarkBg
 import com.cleanbar.hider.ui.theme.CleanBarTheme
 import rikka.shizuku.Shizuku
 
@@ -55,7 +63,19 @@ class MainActivity : ComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Enable edge-to-edge with transparent dark system bars to prevent white flash
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         super.onCreate(savedInstanceState)
+
+        // Disable contrast scrims on Android 10+ and set window decor to dark
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
+        window.decorView.setBackgroundColor(android.graphics.Color.parseColor("#121212"))
 
         try {
             Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
@@ -68,23 +88,39 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             CleanBarTheme {
-                var currentScreen by remember { mutableStateOf(AppScreen.MAIN) }
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = CleanBarDarkBg
+                ) {
+                    var currentScreen by remember { mutableStateOf(AppScreen.MAIN) }
 
-                AnimatedContent(
-                    targetState = currentScreen,
-                    transitionSpec = {
-                        if (targetState.ordinal > initialState.ordinal) {
-                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> -width / 3 } + fadeOut()
-                            )
-                        } else {
-                            (slideInHorizontally { width -> -width / 3 } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> width } + fadeOut()
-                            )
-                        }
-                    },
-                    label = "ScreenTransition"
-                ) { screen ->
+                    AnimatedContent(
+                        targetState = currentScreen,
+                        transitionSpec = {
+                            if (targetState.ordinal > initialState.ordinal) {
+                                (slideInHorizontally(
+                                    animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                    initialOffsetX = { width -> (width * 0.25f).toInt() }
+                                ) + fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing))).togetherWith(
+                                    slideOutHorizontally(
+                                        animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { width -> -(width * 0.15f).toInt() }
+                                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                                )
+                            } else {
+                                (slideInHorizontally(
+                                    animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                    initialOffsetX = { width -> -(width * 0.15f).toInt() }
+                                ) + fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing))).togetherWith(
+                                    slideOutHorizontally(
+                                        animationSpec = tween(280, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { width -> (width * 0.25f).toInt() }
+                                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                                )
+                            }
+                        },
+                        label = "ScreenTransition"
+                    ) { screen ->
                     when (screen) {
                         AppScreen.MAIN -> {
                             MainScreen(
@@ -127,6 +163,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 
     private fun checkShizukuStatus() {
         isShizukuActive = ShizukuManager.isShizukuAvailable()
